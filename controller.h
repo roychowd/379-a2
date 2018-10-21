@@ -1,9 +1,7 @@
 #ifndef controller_h
 #define controller_h
-typedef struct
-{
-	int nSwitch;
-} Controller;
 
+
+void detectController(char **argv, Controller *controller);
 
 #endif

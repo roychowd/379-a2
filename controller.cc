@@ -1,18 +1,7 @@
-#define _BSD_SOURCE
-#include <iostream>
-#include <string>
-#include <stdio.h>
-#include <stdlib.h>
-#include <unistd.h>
-#include <stdarg.h>
-#include <string.h>
-#include <assert.h>
-#include <sys/types.h>
-#include <sys/stat.h>
-#include <fcntl.h>
+#include "variables.h"
 #include "controller.h"
 
-void err_sys(const char *x)
+static void err_sys(const char *x)
 {
 	perror(x);
 	exit(1);
@@ -20,6 +9,7 @@ void err_sys(const char *x)
 
 void detectController(char **argv, Controller *controller)
 {
+	cout << "detect control called " << endl;
 	if (strcmp(argv[1], "cont") == 0)
 	{
 		if (!(controller->nSwitch = atoi(argv[2])))
