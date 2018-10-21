@@ -1,4 +1,3 @@
-#include "variables.h"
 #include "controller.h"
 
 static void err_sys(const char *x)

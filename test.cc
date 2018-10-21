@@ -49,13 +49,75 @@
 // 						THIS INFORMATION IS PASSED OT THE NEIGHBOUR IN A RELAY PACKET
 //
 
+// #define _BSD_SOURCE
+// #include <iostream>
+// #include <string>
+// #include <vector>
+// #include <stdio.h>
+// #include <stdlib.h>
+// #include <unistd.h>
+// #include <stdarg.h>
+// #include <string.h>
+// #include <assert.h>
+// #include <sys/types.h>
+// #include <sys/stat.h>
+// #include <fcntl.h>
 
 #include "controller.h"
 #include "switch.h"
 
+// using namespace std;
+// #define MAX_NSW 7
 
+// typedef struct
+// {
+// 	int ADMIT;
+// 	int ACK;
+// 	int ADDRULE;
+// 	int RELAYIN;
+// 	int OPEN;
+// 	int QUERY;
+// 	int RELAYOUT;
+// } packetStats;
+
+// typedef struct
+// {
+// 	string srcIP;
+// 	string destIP;
+// 	string actionType;
+// 	int actionVal;
+// 	int srcIP_lo;
+// 	int srcIP_hi;
+// 	int destIP_lo;
+// 	int destIP_hi;
+// 	int pri;
+// 	int pktcount;
+// 	packetStats stats;
+// } flowEntry;
+
+// typedef struct
+// {
+// 	int nSwitch;
+// } Controller;
+
+// typedef struct
+// {
+// 	string filename;
+// 	int position;
+// 	string IP_ADDR;
+// 	int IP_LOW;
+// 	int IP_HIGH;
+// 	string swj;
+// 	string swk;
+// } SWI;
+
+// vector<flowEntry> flowtable;
 
 void err_sys(const char *x);
+// void detectController(char **argv, Controller *controller);
+// void detectSwitch(char **argv, SWI *swi);
+// void grabIP(SWI **swi, char *arg);
+// void startSwitchLoop(SWI *swi);
 
 int main(int argc, char **argv)
 {
@@ -68,8 +130,6 @@ int main(int argc, char **argv)
 		Controller controller;
 		detectController(argv, &controller);
 		// CONTROLLER LOOP //
-
-		// for each switch (0- nswitch-1) connect to fifos
 	}
 	if (argc == 6)
 	{
@@ -77,24 +137,8 @@ int main(int argc, char **argv)
 
 		detectSwitch(argv, &swi);
 		// switch loop //
-
-		// ========= SET UP FIFOS =============== // 
-		// set up fifo with switch swi to controller (0) at port 1
-
-		// set up fifo with switch at port 2
-
-		// set up fifo with switch at port 4
-
-
 		vector<flowEntry> flowtable;
-		initializeCurrentFlowEntry(&swi, flowtable);
-		// start a loop and monitor process via poll/select
-
-
-
-		
-
-
+		startSwitchLoop(&swi, flowtable);
 	}
 	return 1;
 }
@@ -105,3 +149,102 @@ void err_sys(const char *x)
 	exit(1);
 }
 
+// void detectController(char **argv, Controller *controller)
+// {
+// 	if (strcmp(argv[1], "cont") == 0)
+// 	{
+// 		if (!(controller->nSwitch = atoi(argv[2])))
+// 		{
+// 			err_sys("nswitch not a valid integer");
+// 		}
+// 		else if ((controller->nSwitch > MAX_NSW) || (controller->nSwitch < 0))
+// 		{
+// 			err_sys("nswitch larger than MAX_NSW (7) or less than 1. Please make sure nSwitch is: 1 <= nSwitch <= 7!");
+// 		}
+// 	}
+// 	else
+// 	{
+// 		err_sys("invalid keyword: No 'cont'. Please run with ./a2sdn cont nswitch");
+// 	}
+// }
+
+// void detectSwitch(char **argv, SWI *swi)
+// {
+// 	// given: as2dn swi trafficfile [null|swj] [null|swk] IPlow-IPhigh //
+
+// 	if (strstr(argv[1], "sw"))
+// 	{
+
+// 		swi->IP_ADDR = string(argv[5]);
+// 		// implement grabIP ranges later
+// 		grabIP(&swi, argv[5]);
+// 		swi->filename = string(argv[2]);
+// 		if (strcmp(argv[3], "null") == 0)
+// 		{
+// 			swi->swj = "";
+// 		}
+// 		else
+// 		{
+// 			swi->swj = string(argv[3]);
+// 		}
+// 		if (strcmp(argv[4], "null") == 0)
+// 		{
+// 			swi->swk = "";
+// 		}
+// 		else
+// 		{
+// 			swi->swk = string(argv[4]);
+// 		}
+// 	}
+// 	return;
+// }
+
+// void grabIP(SWI **swi, char *arg)
+// {
+
+// 	int index = 0;
+// 	char *token = strdup(arg);
+// 	token = strtok(token, "-\n");
+// 	while (token != NULL)
+// 	{
+// 		cout << token << endl;
+// 		if (index == 0)
+// 		{
+// 			(*swi)->IP_LOW = atoi(token);
+// 			index++;
+// 		}
+// 		else if (index == 1)
+// 		{
+// 			(*swi)->IP_HIGH = atoi(token);
+// 		}
+// 		token = strtok(NULL, "-\n");
+// 	}
+// 	return;
+// }
+
+// void startSwitchLoop(SWI *swi)
+// {
+// 	// create an entry in the flow table
+// 	flowtable.push_back(flowEntry());
+// 	// set up flowtable entry
+// 	flowtable[0].srcIP = "0-1000";
+// 	flowtable[0].destIP = swi->IP_ADDR;
+// 	flowtable[0].srcIP_lo = 0;
+// 	flowtable[0].srcIP_lo = 1000;
+// 	flowtable[0].destIP_lo = swi->IP_LOW;
+// 	flowtable[0].destIP_hi = swi->IP_HIGH;
+// 	flowtable[0].actionType = "FORWARD";
+// 	flowtable[0].pri = 4;
+// 	flowtable[0].actionVal = 3;
+// 	flowtable[0].pktcount = 0;
+// 	flowtable[0].stats = {0};
+
+// 	// now that the flowtable is set up we need to use io multiplexing and 
+
+// 	// read and process trafficfile 
+// 	// read the file and ignore # and empty lines and ones that dont have the swi
+	
+
+
+
+// }

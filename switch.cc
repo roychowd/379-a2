@@ -1,4 +1,3 @@
-#include "variables.h"
 #include "switch.h"
 
 static void err_sys(const char *x)
@@ -36,9 +35,8 @@ void detectSwitch(char **argv, SWI *swi)
     cout << "detectSwitch is called" << endl;
     if (strstr(argv[1], "sw"))
     {
-
+        swi->swi = string(argv[1]);
         swi->IP_ADDR = string(argv[5]);
-        // implement grabIP ranges later
         grabIP(&swi, argv[5]);
         swi->filename = string(argv[2]);
         if (strcmp(argv[3], "null") == 0)
@@ -61,7 +59,7 @@ void detectSwitch(char **argv, SWI *swi)
     return;
 }
 
-void startSwitchLoop(SWI *swi, vector<flowEntry> &flowtable)
+void initializeCurrentFlowEntry(SWI *swi, vector<flowEntry> &flowtable)
 {
     cout << "startswitchloop is called" << endl;
     // create an entry in the flow table
@@ -83,4 +81,9 @@ void startSwitchLoop(SWI *swi, vector<flowEntry> &flowtable)
 
     // read and process trafficfile
     // read the file and ignore # and empty lines and ones that dont have the swi
+}
+
+void readFILE(string filename)
+{
+    cout << filename;
 }

@@ -53,13 +53,14 @@ typedef struct
 {
     string filename;
     int position;
+    int positionLeft;
+    int positionRight;
     string IP_ADDR;
     int IP_LOW;
     int IP_HIGH;
+    string swi;
     string swj;
     string swk;
 } SWI;
-
-
 
 #endif
