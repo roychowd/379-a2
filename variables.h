@@ -5,6 +5,8 @@
 #include <iostream>
 #include <string>
 #include <vector>
+
+// C libraries that i need
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
@@ -14,6 +16,8 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>
+#include <sys/types.h>
+#include <sys/stat.h>
 
 using namespace std;
 #define MAX_NSW 7

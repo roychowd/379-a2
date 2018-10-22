@@ -25,3 +25,9 @@ void detectController(char **argv, Controller *controller)
 		err_sys("invalid keyword: No 'cont'. Please run with ./a2sdn cont nswitch");
 	}
 }
+
+void startFIFOControllerToSwitch(SWI *swi)
+{
+	string fifoname = "fifo-0-" + swi->swi;
+	cout << "\n" << fifoname;
+}

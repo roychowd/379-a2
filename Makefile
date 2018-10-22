@@ -20,3 +20,4 @@ switch.o: switch.cc variables.h switch.h
 clean:
 	rm -f *.o
 	rm a2sdn
+	rm -rf fifo*

@@ -49,11 +49,8 @@
 // 						THIS INFORMATION IS PASSED OT THE NEIGHBOUR IN A RELAY PACKET
 //
 
-
 #include "controller.h"
 #include "switch.h"
-
-
 
 void err_sys(const char *x);
 
@@ -78,23 +75,36 @@ int main(int argc, char **argv)
 		detectSwitch(argv, &swi);
 		// switch loop //
 
-		// ========= SET UP FIFOS =============== // 
+		// ========= SET UP FIFOS =============== //
+
 		// set up fifo with switch swi to controller (0) at port 1
+		// int code = mkfifo("fifo-1-0", 0666);
+		// if (code == -1) {
+		// 	perror("Cannot open Fifo as it already exists");
+		// 	return EXIT_FAILURE;
+		// }
 
 		// set up fifo with switch at port 2
 
 		// set up fifo with switch at port 4
 
-
 		vector<flowEntry> flowtable;
 		initializeCurrentFlowEntry(&swi, flowtable);
 		// start a loop and monitor process via poll/select
 
-
-
+		startFIFOSwitchToController(&swi);
+		startFIFOControllerToSwitch(&swi);
 		
 
+		startFifoSwitchToSwitch(&swi);
+		// int fd = open("fifo-1-0", O_RDONLY);
+		// if (fd == -1)
+		// {
+		// 	perror("Cannot open fifo for reading");
+		// 	return EXIT_FAILURE;
+		// }
 
+		// puts("FIFO OPEN");
 	}
 	return 1;
 }
@@ -104,4 +114,3 @@ void err_sys(const char *x)
 	perror(x);
 	exit(1);
 }
-
