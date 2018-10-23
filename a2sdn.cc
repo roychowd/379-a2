@@ -63,9 +63,10 @@ int main(int argc, char **argv)
 	if (argc == 3)
 	{
 		Controller controller;
-		packetStats ControllerPacketStats; 
+		packetStats ControllerPacketStats;
 		detectController(argv, &controller);
 		// CONTROLLER LOOP //
+		ControllerLoop(controller.nSwitch);
 
 		// for each switch (0- nswitch-1) connect to fifos
 	}
@@ -92,9 +93,8 @@ int main(int argc, char **argv)
 		vector<flowEntry> flowtable;
 		initializeCurrentFlowEntry(&swi, flowtable);
 		// start a loop and monitor process via poll/select
-		startFIFOSwitchToController(&swi); 
+		startFIFOSwitchToController(&swi);
 		startFIFOControllerToSwitch(&swi);
-		
 
 		startFifoSwitchToSwitch(&swi);
 		// int fd = open("fifo-1-0", O_RDONLY);
