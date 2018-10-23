@@ -89,7 +89,6 @@ void initializeCurrentFlowEntry(SWI *swi, vector<flowEntry> &flowtable)
     flowtable[0].actionVal = 3;
     flowtable[0].pktcount = 0;
     flowtable[0].stats = {0};
-
     // now that the flowtable is set up we need to use io multiplexing and
 
     // read and process trafficfile
@@ -99,16 +98,19 @@ void initializeCurrentFlowEntry(SWI *swi, vector<flowEntry> &flowtable)
 void startFIFOSwitchToController(SWI *swi)
 {
     string fifoname = "fifo-" + swi->swi + "-0";
-    cout << fifoname;
+    
+
     // mkfifo and convert string to char *
 }
 
 void startFifoSwitchToSwitch(SWI *swi)
 {
     string fifonameLeft = "fifo-" + swi->swi + "-" + swi->swj;
+    string fifonameRight = "fifo-" + swi->swi + "-" + swi->swk;
 }
 
 void readFILE(string filename)
 {
     cout << filename;
 }
+

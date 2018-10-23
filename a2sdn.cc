@@ -63,6 +63,7 @@ int main(int argc, char **argv)
 	if (argc == 3)
 	{
 		Controller controller;
+		packetStats ControllerPacketStats; 
 		detectController(argv, &controller);
 		// CONTROLLER LOOP //
 
@@ -91,8 +92,7 @@ int main(int argc, char **argv)
 		vector<flowEntry> flowtable;
 		initializeCurrentFlowEntry(&swi, flowtable);
 		// start a loop and monitor process via poll/select
-
-		startFIFOSwitchToController(&swi);
+		startFIFOSwitchToController(&swi); 
 		startFIFOControllerToSwitch(&swi);
 		
 

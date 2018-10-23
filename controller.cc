@@ -29,5 +29,5 @@ void detectController(char **argv, Controller *controller)
 void startFIFOControllerToSwitch(SWI *swi)
 {
 	string fifoname = "fifo-0-" + swi->swi;
-	cout << "\n" << fifoname;
+	
 }
