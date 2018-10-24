@@ -97,7 +97,6 @@ static void createNewFlowEntry(size_t index, vector<flowEntry> &flowtable, strin
 {
     // cout << "teh index is .. " << index <<
     flowtable.push_back(flowEntry());
-    //
     flowtable[flowtable.size() - 1].srcIP = "0-1000";
     flowtable[flowtable.size() - 1].destIP = destIPLow + "-" + destIPHigh;
     flowtable[flowtable.size() - 1].srcIP_lo = 0;
@@ -199,6 +198,7 @@ void switchLoop(SWI *swi)
         }
         maxFDS++;
     }
+    
     while (1)
     {
         FD_ZERO(&readFds);

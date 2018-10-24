@@ -8,6 +8,6 @@ void startFIFOSwitchToController(SWI *swi);
 void readFILE(string filename, SWI *swi, packetStats *stats, vector<flowEntry> flowtable);
 void startFifoSwitchToSwitch(SWI *swi);
 // void sendMessageToController();
-void SwitchLoop(SWI *swi) ;
+void switchLoop(SWI *swi) ;
 
 #endif
