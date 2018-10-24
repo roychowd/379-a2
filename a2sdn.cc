@@ -96,10 +96,11 @@ int main(int argc, char **argv)
 		// start a loop and monitor process via poll/select
 
 		readFILE(swi.filename, &swi, &stats, flowtable);
-		startFIFOSwitchToController(&swi);
-		startFIFOControllerToSwitch(&swi);
+		switchLoop(&swi);
+		// startFIFOSwitchToController(&swi);
+		// startFIFOControllerToSwitch(&swi);
 
-		startFifoSwitchToSwitch(&swi);
+		// startFifoSwitchToSwitch(&swi);
 		// int fd = open("fifo-1-0", O_RDONLY);
 		// if (fd == -1)
 		// {

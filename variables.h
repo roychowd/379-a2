@@ -25,6 +25,13 @@
 using namespace std;
 #define MAX_NSW 7
 
+
+typedef struct
+{
+    int fileDescriptor;
+    string FifoName;
+} fifoStruct;
+
 typedef struct
 {
     int ADMIT;

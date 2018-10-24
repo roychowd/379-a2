@@ -147,7 +147,6 @@ void readFILE(string filename, SWI *swi, packetStats *stats, vector<flowEntry> f
                 else
                 {
                     // create a new entry in flowtable
-
                     int size = flowtable.size();
                     for (int i = 0; i < size; i++)
                     {
@@ -167,28 +166,102 @@ void readFILE(string filename, SWI *swi, packetStats *stats, vector<flowEntry> f
     }
 }
 
-void sendMessageToController()
+void switchLoop(SWI *swi)
 {
+    int fd = 0;
+    int maxFDS = 1;  // stdin = 0;
+    char buf[1025];  // buffer to listen to list and exit
+    int ret, sret;   // ret - return and sret - select return
+    fd_set readFds;  // readfds - fdset data strucutre
+    int type = 0;    //  may need this later
+    timeval timeout; // time out structure for switchloop
+                     // vector<fifoStruct> fifos = setupSwitchFifos(swi->);
+    string fifoToSwitchLeft, fifoToSwitchRight = "";
+    string fifoToController = "fifo-" + swi->swi + "-0";
+    int fifoLeft, fifoRight;
+    if (swi->swk.compare("") != 0)
+    {
+        fifoToSwitchRight = "fifo-" + swi->swi + "-" + swi->swk;
+        fifoRight = open(fifoToSwitchRight.c_str(), O_RDWR | O_NONBLOCK);
+        if (fifoRight == -1)
+        {
+            err_sys("Unable to open fifo");
+        }
+        maxFDS++;
+    }
+    if (swi->swj.compare("") != 0)
+    {
+        fifoToSwitchLeft = "fifo-" + swi->swi + "-" + swi->swj;
+        fifoLeft = open(fifoToSwitchLeft.c_str(), O_RDWR | O_NONBLOCK);
+        if (fifoLeft == -1)
+        {
+            err_sys("Unable to open fifo");
+        }
+        maxFDS++;
+    }
+    while (1)
+    {
+        FD_ZERO(&readFds);
+        FD_SET(fd, &readFds);
+        if (fifoToSwitchLeft.compare("") != 0)
+            FD_SET(fifoLeft, &readFds);
+        if (fifoToSwitchRight.compare("") != 0)
+            FD_SET(fifoLeft, &readFds);
+        timeout.tv_sec = 0;
+        timeout.tv_usec = 0;
+        sret = select(maxFDS + 1, &readFds, NULL, NULL, &timeout);
+        if (sret == -1)
+            err_sys("select call error");
+        if (sret == 0)
+        {
+            if (type == 0)
+            {
+                continue;
+            }
+        }
+        else
+        {
+            memset(buf, 0, sizeof(buf));
+            ret = read(fd, (void *)buf, sizeof(buf));
+            if (ret != -1)
+            {
+                // cout << "buf = " << buf << endl;
+
+                if (strcmp(buf, "list\n") == 0)
+                {
+                    cout << "list" << endl;
+                }
+                else if (strcmp(buf, "exit\n") == 0)
+                {
+                    cout << "list then exit" << endl;
+                }
+            }
+        }
+    }
 }
+// void sendMessageToController()
+// {
+//     // lmao i have no idea what im doing lmao
+// }
 
-MSG composeMSTR(const char *a, const char *b, const char *c)
-{
-    MSG msg;
+// MSG composeMSTR(const char *a, const char *b, const char *c)
+// {
+//     MSG msg;
 
-    memset((char *)&msg, 0, sizeof(msg));
-    strcpy(msg.mStr.d[0], a);
-    strcpy(msg.mStr.d[1], b);
-    strcpy(msg.mStr.d[2], c);
-    return msg;
-}
+//     memset((char *)&msg, 0, sizeof(msg));
+//     strcpy(msg.mStr.d[0], a);
+//     strcpy(msg.mStr.d[1], b);
+//     strcpy(msg.mStr.d[2], c);
+//     return msg;
+// }
 
-void sendFrame(int fd, KIND kind, MSG *msg)
-{
-    FRAME frame;
+// void sendFrame(int fd, KIND kind, MSG *msg)
+// {
+//     FRAME frame;
 
-    assert(fd >= 0);
-    memset((char *)&frame, 0, sizeof(frame));
-    frame.kind = kind;
-    frame.msg = *msg;
-    write(fd, (char *)&frame, sizeof(frame));
-}
+//     assert(fd >= 0);
+//     memset((char *)&frame, 0, sizeof(frame));
+//     frame.kind = kind;
+//     frame.msg = *msg;
+//     write(fd, (char *)&frame, sizeof(frame));
+// }

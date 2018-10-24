@@ -2,11 +2,7 @@
 #define controller_h
 #include "variables.h"
 
-typedef struct
-{
-    int fileDescriptor;
-    string FifoName;
-} fifoStruct;
+
 
 static int maxFDS = 1;
 
