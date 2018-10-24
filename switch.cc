@@ -69,7 +69,6 @@ void detectSwitch(char **argv, SWI *swi)
         swi->filename = string(argv[2]);
         grabPositions(argv[1], argv[3], argv[4], &swi);
     }
-
     return;
 }
 
@@ -88,17 +87,32 @@ void initializeCurrentFlowEntry(SWI *swi, vector<flowEntry> &flowtable)
     flowtable[0].pri = 4;
     flowtable[0].actionVal = 3;
     flowtable[0].pktcount = 0;
-    flowtable[0].stats = {0};
     // now that the flowtable is set up we need to use io multiplexing and
 
     // read and process trafficfile
     // read the file and ignore # and empty lines and ones that dont have the swi
 }
 
+static void createNewFlowEntry(size_t index, vector<flowEntry> &flowtable, string destIPLow, string destIPHigh)
+{
+    // cout << "teh index is .. " << index <<
+    flowtable.push_back(flowEntry());
+    //
+    flowtable[flowtable.size() - 1].srcIP = "0-1000";
+    flowtable[flowtable.size() - 1].destIP = destIPLow + "-" + destIPHigh;
+    flowtable[flowtable.size() - 1].srcIP_lo = 0;
+    flowtable[flowtable.size() - 1].srcIP_lo = 1000;
+    flowtable[flowtable.size() - 1].destIP_lo = atoi(destIPLow.c_str());
+    flowtable[flowtable.size() - 1].destIP_hi = atoi(destIPHigh.c_str());
+    flowtable[flowtable.size() - 1].actionType = "FORWARD";
+    flowtable[flowtable.size() - 1].pri = 4;
+    flowtable[flowtable.size() - 1].actionVal = 3;
+    flowtable[flowtable.size() - 1].pktcount = 1;
+}
+
 void startFIFOSwitchToController(SWI *swi)
 {
     string fifoname = "fifo-" + swi->swi + "-0";
-    
 
     // mkfifo and convert string to char *
 }
@@ -109,8 +123,72 @@ void startFifoSwitchToSwitch(SWI *swi)
     string fifonameRight = "fifo-" + swi->swi + "-" + swi->swk;
 }
 
-void readFILE(string filename)
+void readFILE(string filename, SWI *swi, packetStats *stats, vector<flowEntry> flowtable)
 {
-    cout << filename;
+    string line;
+    ifstream myfile;
+    myfile.open(filename.c_str());
+    if (myfile.is_open())
+    {
+        while (getline(myfile, line))
+        {
+            if ((line.find("sw" + swi->swi) != std::string::npos) && (strstr(line.c_str(), "#") == NULL))
+            {
+                cout << line << endl;
+                // NOTE i separated whitespace using this resource: https://stackoverflow.com/questions/236129/how-do-i-iterate-over-the-words-of-a-string?rq=1
+                // all created for separating whitespace from string goes to user Zunino on stack overflow
+                istringstream li(line);
+                vector<string> tokens{istream_iterator<string>{li}, istream_iterator<string>{}};
+                if (atoi(tokens.at(1).c_str()) >= swi->IP_LOW && atoi(tokens.at(2).c_str()) <= swi->IP_HIGH)
+                {
+                    stats->ADMIT++;
+                    flowtable[0].pktcount++;
+                }
+                else
+                {
+                    // create a new entry in flowtable
+
+                    int size = flowtable.size();
+                    for (int i = 0; i < size; i++)
+                    {
+                        if (atoi(tokens.at(1).c_str()) >= flowtable.at(i).destIP_lo && atoi(tokens.at(2).c_str()) <= flowtable.at(i).destIP_hi)
+                        {
+                            flowtable.at(i).pktcount++;
+                            break;
+                        }
+                        else if (i == size - 1)
+                        {
+                            createNewFlowEntry(flowtable.size(), flowtable, tokens.at(1), tokens.at(2));
+                        }
+                    }
+                }
+            }
+        }
+    }
 }
 
+void sendMessageToController()
+{
+}
+
+MSG composeMSTR(const char *a, const char *b, const char *c)
+{
+    MSG msg;
+
+    memset((char *)&msg, 0, sizeof(msg));
+    strcpy(msg.mStr.d[0], a);
+    strcpy(msg.mStr.d[1], b);
+    strcpy(msg.mStr.d[2], c);
+    return msg;
+}
+
+void sendFrame(int fd, KIND kind, MSG *msg)
+{
+    FRAME frame;
+
+    assert(fd >= 0);
+    memset((char *)&frame, 0, sizeof(frame));
+    frame.kind = kind;
+    frame.msg = *msg;
+    write(fd, (char *)&frame, sizeof(frame));
+}

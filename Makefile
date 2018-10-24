@@ -37,6 +37,24 @@ fifo:
 	mkfifo fifo-7-0
 	mkfifo fifo-0-7
 
+	mkfifo fifo-1-2
+	mkfifo fifo-2-1
+
+	mkfifo fifo-2-3
+	mkfifo fifo-3-2
+
+	mkfifo fifo-3-4
+	mkfifo fifo-4-3
+
+	mkfifo fifo-4-5
+	mkfifo fifo-5-4
+
+	mkfifo fifo-5-6
+	mkfifo fifo-6-5
+
+	mkfifo fifo-6-7
+	mkfifo fifo-7-6
+
 
 
 clean:

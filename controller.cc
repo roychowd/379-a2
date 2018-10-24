@@ -3,20 +3,31 @@
 static void err_sys(const char *x)
 {
 	perror(x);
-	exit(1);
+	exit(EXIT_FAILURE);
 }
+
+// a function that opens all fifos needed specified by user parameter nSwitch
+// returns a vector that contains the name of the fifo as well as the
 static vector<fifoStruct> setUpFifos(int nswitch)
 {
 	vector<fifoStruct> fifos;
 	string fifoname = "fifo-";
 	for (int index = 1; index <= nswitch; index++)
 	{
-		fifoStruct fifo;
+		fifoStruct fifo, fifo2;
+		fifo2.FifoName = fifoname + "0-" + to_string(index);
 		fifo.FifoName = fifoname + to_string(index) + "-0";
-		cout << fifo.FifoName << endl;
+		cout << fifo2.FifoName << endl;
 		fifo.fileDescriptor = open(fifo.FifoName.c_str(), O_RDONLY | O_NONBLOCK);
+		fifo2.fileDescriptor = open(fifo2.FifoName.c_str(), O_RDWR | O_NONBLOCK);
+		if (fifo2.fileDescriptor == -1 || fifo.fileDescriptor == -1)
+		{
+			cout << fifo2.fileDescriptor << fifo.fileDescriptor << endl;
+			err_sys("Error opening FIFO's. MAKE CLEAN and then run MAKE");
+		}
 		fifos.push_back(fifo);
-		maxFDS++;
+		fifos.push_back(fifo2);
+		maxFDS += 2;
 	}
 	return fifos;
 }
@@ -62,15 +73,15 @@ void ControllerLoop(int nswitch)
 		FD_SET(fd, &readFds);
 		for (int x = 0; x < fifos.size(); x++)
 		{
+			// set fds for select includes all open fifos
 			FD_SET(fifos.at(x).fileDescriptor, &readFds);
 		}
 		timeout.tv_sec = 0;
 		timeout.tv_usec = 0;
 		sret = select(maxFDS + 1, &readFds, NULL, NULL, &timeout);
-		cout << maxFDS << endl;
 		if (sret == -1)
 		{
-			perror("Select call error");
+			err_sys("Select call error");
 		}
 		if (sret == 0)
 		{

@@ -73,8 +73,9 @@ int main(int argc, char **argv)
 	if (argc == 6)
 	{
 		SWI swi;
-
+		packetStats stats;
 		detectSwitch(argv, &swi);
+
 		// switch loop //
 
 		// ========= SET UP FIFOS =============== //
@@ -93,6 +94,8 @@ int main(int argc, char **argv)
 		vector<flowEntry> flowtable;
 		initializeCurrentFlowEntry(&swi, flowtable);
 		// start a loop and monitor process via poll/select
+
+		readFILE(swi.filename, &swi, &stats, flowtable);
 		startFIFOSwitchToController(&swi);
 		startFIFOControllerToSwitch(&swi);
 

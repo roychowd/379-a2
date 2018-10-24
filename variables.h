@@ -5,6 +5,9 @@
 #include <iostream>
 #include <string>
 #include <vector>
+#include <fstream>
+#include <istream>
+#include <sstream>
 
 // C libraries that i need
 #include <stdio.h>
@@ -18,7 +21,6 @@
 #include <fcntl.h>
 #include <sys/types.h>
 #include <sys/stat.h>
-
 
 using namespace std;
 #define MAX_NSW 7
@@ -46,7 +48,6 @@ typedef struct
     int destIP_hi;
     int pri;
     int pktcount;
-    packetStats stats;
 } flowEntry;
 
 typedef struct
