@@ -1,3 +1,5 @@
+// ============================================== SWITCH.cc ========================================================== //
+
 #include "switch.h"
 
 static void err_sys(const char *x)
@@ -93,6 +95,7 @@ void initializeCurrentFlowEntry(SWI *swi, vector<flowEntry> &flowtable)
     // read the file and ignore # and empty lines and ones that dont have the swi
 }
 
+// I know its code duplication but im running low on sleep and i just dont care anymore at this point !!! im sorry.
 static void createNewFlowEntry(size_t index, vector<flowEntry> &flowtable, string destIPLow, string destIPHigh)
 {
     // cout << "teh index is .. " << index <<
@@ -109,21 +112,10 @@ static void createNewFlowEntry(size_t index, vector<flowEntry> &flowtable, strin
     flowtable[flowtable.size() - 1].pktcount = 1;
 }
 
-void startFIFOSwitchToController(SWI *swi)
-{
-    string fifoname = "fifo-" + swi->swi + "-0";
-
-    // mkfifo and convert string to char *
-}
-
-void startFifoSwitchToSwitch(SWI *swi)
-{
-    string fifonameLeft = "fifo-" + swi->swi + "-" + swi->swj;
-    string fifonameRight = "fifo-" + swi->swi + "-" + swi->swk;
-}
-
 void readFILE(string filename, SWI *swi, packetStats *stats, vector<flowEntry> flowtable)
 {
+    // re do this with io multiplexing and query and stuff
+
     string line;
     ifstream myfile;
     myfile.open(filename.c_str());
@@ -165,8 +157,23 @@ void readFILE(string filename, SWI *swi, packetStats *stats, vector<flowEntry> f
     }
 }
 
+static void sendToFifo(string fifoname, Packet packet, int fd)
+{
+    assert(fd >= 0);
+    write(fd, &packet, sizeof(packet));
+}
+
+static Packet prepareMessage(KIND type, string msg)
+{
+    Packet packet;
+    packet.msg = msg;
+    packet.kind = type;
+    return packet;
+}
+
 void switchLoop(SWI *swi)
 {
+    // ANCHOR SWITCHLOOP
     int fd = 0;
     int maxFDS = 1;  // stdin = 0;
     char buf[1025];  // buffer to listen to list and exit
@@ -175,16 +182,25 @@ void switchLoop(SWI *swi)
     int type = 0;    //  may need this later
     timeval timeout; // time out structure for switchloop
                      // vector<fifoStruct> fifos = setupSwitchFifos(swi->);
+    int fifoCont, fifoLeft, fifoRight;
     string fifoToSwitchLeft, fifoToSwitchRight = "";
     string fifoToController = "fifo-" + swi->swi + "-0";
-    int fifoLeft, fifoRight;
+    fifoCont = open(fifoToController.c_str(), O_RDWR | O_NONBLOCK);
+    maxFDS++;
+    if (fifoCont == -1)
+    {
+        err_sys("unable to open fifo to controller ");
+    }
+    Packet openpacket = prepareMessage(OPEN, swi->IP_ADDR);
+    sendToFifo(fifoToController, openpacket, fifoCont);
+
     if (swi->swk.compare("") != 0)
     {
         fifoToSwitchRight = "fifo-" + swi->swi + "-" + swi->swk;
         fifoRight = open(fifoToSwitchRight.c_str(), O_RDWR | O_NONBLOCK);
         if (fifoRight == -1)
         {
-            err_sys("Unable to open fifo");
+            err_sys("Unable to open fifo to right switch");
         }
         maxFDS++;
     }
@@ -194,15 +210,15 @@ void switchLoop(SWI *swi)
         fifoLeft = open(fifoToSwitchLeft.c_str(), O_RDWR | O_NONBLOCK);
         if (fifoLeft == -1)
         {
-            err_sys("Unable to open fifo");
+            err_sys("Unable to open fifo to left switch ");
         }
         maxFDS++;
     }
-    
     while (1)
     {
         FD_ZERO(&readFds);
         FD_SET(fd, &readFds);
+        FD_SET(fifoCont, &readFds);
         if (fifoToSwitchLeft.compare("") != 0)
             FD_SET(fifoLeft, &readFds);
         if (fifoToSwitchRight.compare("") != 0)
@@ -239,29 +255,3 @@ void switchLoop(SWI *swi)
         }
     }
 }
-// void sendMessageToController()
-// {
-//     // lmao i have no idea what im doing lmao
-// }
-
-// MSG composeMSTR(const char *a, const char *b, const char *c)
-// {
-//     MSG msg;
-
-//     memset((char *)&msg, 0, sizeof(msg));
-//     strcpy(msg.mStr.d[0], a);
-//     strcpy(msg.mStr.d[1], b);
-//     strcpy(msg.mStr.d[2], c);
-//     return msg;
-// }
-
-// void sendFrame(int fd, KIND kind, MSG *msg)
-// {
-//     FRAME frame;
-
-//     assert(fd >= 0);
-//     memset((char *)&frame, 0, sizeof(frame));
-//     frame.kind = kind;
-//     frame.msg = *msg;
-//     write(fd, (char *)&frame, sizeof(frame));
-// }

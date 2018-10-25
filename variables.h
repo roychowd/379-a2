@@ -25,7 +25,6 @@
 using namespace std;
 #define MAX_NSW 7
 
-
 typedef struct
 {
     int fileDescriptor;
@@ -75,5 +74,22 @@ typedef struct
     string swj;
     string swk;
 } SWI;
+
+// Inspiration taken from http://webdocs.cs.ualberta.ca/~c379/F18/379only/lab-messages.html //
+typedef enum
+{
+    OPEN,
+    ACK,
+    QUERY,
+    ADD,
+    RELAY
+} KIND; // Message kinds
+
+
+typedef struct
+{
+    string msg;
+    KIND kind;
+} Packet;
 
 #endif

@@ -58,6 +58,7 @@ void startFIFOControllerToSwitch(SWI *swi)
 
 void ControllerLoop(int nswitch)
 {
+	// ANCHOR  Controller Loop
 	// use IO multiplexing Select() and poll() to handle IO from the keyboard and the attached switches in a nonblocking manner
 	// set of file descriptors ( need to monitor conncections to stdin and piping information!!! )
 	int fd = 0; // stdin = 0;
@@ -85,9 +86,52 @@ void ControllerLoop(int nswitch)
 		}
 		if (sret == 0)
 		{
+			// for (std::vector<fifoStruct>::iterator it = fifos.begin() + 1; it != fifos.end(); ++it)
+			// {
+			// 	int len;
+			// 	Packet packet;
+			// 	assert(it->fileDescriptor >= 0);
+			// 	memset((char *)&packet, 0, sizeof(packet));
+
+			// 	cout << len << endl;
+			// 	if (len != -1)
+			// 	{
+			// 		cout << packet.msg;
+			// 		assert(0);
+			// 	}
+			// }
+			// for (std::vector<fifoStruct>::iterator it = fifos.begin() + 1; it != fifos.end(); ++it)
+			// {
+			// 	if (FD_ISSET(it->fileDescriptor, &readFds))
+			// 	{
+			// 		cout << filed << endl;
+			// 		int len = 0;
+			// 		Packet packet;
+			// 		memset(&packet, 0, sizeof(packet));
+			// 		len = read(it->, (void *)&packet, sizeof(packet));
+			// 		cout << len << endl;
+			// 		if (len != -1)
+			// 		{
+			// 			cout << "OMGGGGG";
+			// 			assert(0);
+			// 		}
+			// 	}
+			// }
 			if (type == 0)
 			{
-				continue;
+				// continue;
+				int filed = open("fifo-1-0", O_RDONLY);
+				cout << filed << endl;
+				int len = 0;
+				Packet packet;
+				memset(&packet, 0, sizeof(packet));
+				len = read(filed, (void *)&packet, sizeof(packet));
+				cout << len << endl;
+				if (len != -1)
+				{
+					cout << "OMGGGGG";
+					cout << packet.msg << endl;
+				}
 			}
 		}
 		else
