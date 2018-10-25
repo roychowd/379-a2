@@ -27,8 +27,10 @@ using namespace std;
 
 typedef struct
 {
-    int fileDescriptor;
-    string FifoName;
+    int fileDescriptorSwiToCont;
+    int fileDescriptorContToSwi;
+    string fifoNameSwiToCont;
+    string fifoNameContToSwi;
 } fifoStruct;
 
 typedef struct
@@ -82,13 +84,16 @@ typedef enum
     ACK,
     QUERY,
     ADD,
-    RELAY
+    RELAY,
+    NONE
 } KIND; // Message kinds
-
 
 typedef struct
 {
-    string msg;
+    string msg; // port3
+    string swi;
+    string port1; //swj
+    string port2; // swk
     KIND kind;
 } Packet;
 

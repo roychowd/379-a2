@@ -112,6 +112,7 @@ static void createNewFlowEntry(size_t index, vector<flowEntry> &flowtable, strin
     flowtable[flowtable.size() - 1].pktcount = 1;
 }
 
+// what am i doing with my life
 void readFILE(string filename, SWI *swi, packetStats *stats, vector<flowEntry> flowtable)
 {
     // re do this with io multiplexing and query and stuff
@@ -125,7 +126,6 @@ void readFILE(string filename, SWI *swi, packetStats *stats, vector<flowEntry> f
         {
             if ((line.find("sw" + swi->swi) != std::string::npos) && (strstr(line.c_str(), "#") == NULL))
             {
-                cout << line << endl;
                 // NOTE i separated whitespace using this resource: https://stackoverflow.com/questions/236129/how-do-i-iterate-over-the-words-of-a-string?rq=1
                 // all created for separating whitespace from string goes to user Zunino on stack overflow
                 istringstream li(line);
@@ -163,10 +163,22 @@ static void sendToFifo(string fifoname, Packet packet, int fd)
     write(fd, &packet, sizeof(packet));
 }
 
-static Packet prepareMessage(KIND type, string msg)
+static Packet prepareMessage(KIND type, SWI *swi)
 {
     Packet packet;
-    packet.msg = msg;
+    packet.swi = "sw" + swi->swi;
+    packet.port1 = swi->swj;
+    packet.port2 = swi->swk;
+    if (strcmp(swi->swj.c_str(), "") == 0)
+    {
+        packet.port1 = "-1";
+    }
+    if (strcmp(swi->swk.c_str(), "") == 0)
+    {
+        packet.port2 = "-1";
+    }
+    packet.msg = swi->IP_ADDR;
+
     packet.kind = type;
     return packet;
 }
@@ -182,49 +194,81 @@ void switchLoop(SWI *swi)
     int type = 0;    //  may need this later
     timeval timeout; // time out structure for switchloop
                      // vector<fifoStruct> fifos = setupSwitchFifos(swi->);
-    int fifoCont, fifoLeft, fifoRight;
-    string fifoToSwitchLeft, fifoToSwitchRight = "";
-    string fifoToController = "fifo-" + swi->swi + "-0";
-    fifoCont = open(fifoToController.c_str(), O_RDWR | O_NONBLOCK);
-    maxFDS++;
-    if (fifoCont == -1)
-    {
+    int fdToCont, fdFromCont, fdToLeft, fdToRight, fdFromLeft, fdFromRight = 0;
+    string fifoToSwitchLeft, fifoFromSwitchLeft, fifoToSwitchRight, fifoFromSwitchRight = "";
+
+    // creates controller fifos
+    string fifoToController = "fifo-" + swi->swi + "-0";  // open for writing to controller
+    string fifoControllerToSwitch = "fifo-0-" + swi->swi; // open for reading from controller
+
+    // ================================ OPEN FIFO To Controller FOR WRITING TO CONTROLLER (fifo-swi-0) ===============================================
+    fdToCont = open(fifoToController.c_str(), O_RDWR | O_NONBLOCK);
+    if (fdToCont == -1)
         err_sys("unable to open fifo to controller ");
+    maxFDS++;
+    // openpacket needs to be sent to controller! - prepare the message to be sent to controller
+    Packet openpacket = prepareMessage(OPEN, swi);
+    sendToFifo(fifoToController, openpacket, fdToCont);
+    // ================================ OPEN FIFO From Controller (fifo-0-swi)  FOR READING FROM CONTROLLER =========================================
+    fdFromCont = open(fifoControllerToSwitch.c_str(), O_RDONLY | O_NONBLOCK);
+    if (fdFromCont == -1)
+    {
+        err_sys("unable to open fifo from controller");
     }
-    Packet openpacket = prepareMessage(OPEN, swi->IP_ADDR);
-    sendToFifo(fifoToController, openpacket, fifoCont);
+    cout << fdFromCont;
+
+    maxFDS++;
 
     if (swi->swk.compare("") != 0)
     {
         fifoToSwitchRight = "fifo-" + swi->swi + "-" + swi->swk;
-        fifoRight = open(fifoToSwitchRight.c_str(), O_RDWR | O_NONBLOCK);
-        if (fifoRight == -1)
-        {
+        fifoFromSwitchRight = "fifo" + swi->swk + "-" + swi->swi;
+
+        // ====================== OPEN FIFO TO SWITCH RIGHT AND FIFO FROM SWITCH RIGHT ================================ //
+        fdToRight = open(fifoToSwitchRight.c_str(), O_RDWR | O_NONBLOCK);
+        if (fdToRight == -1)
             err_sys("Unable to open fifo to right switch");
-        }
+        maxFDS++;
+
+        // needs read access
+        fdToLeft = open(fifoFromSwitchRight.c_str(), O_RDWR | O_NONBLOCK);
+        if (fdToLeft == -1)
+            err_sys("Unable to open fifo from right switch");
         maxFDS++;
     }
+
     if (swi->swj.compare("") != 0)
     {
         fifoToSwitchLeft = "fifo-" + swi->swi + "-" + swi->swj;
-        fifoLeft = open(fifoToSwitchLeft.c_str(), O_RDWR | O_NONBLOCK);
-        if (fifoLeft == -1)
-        {
+        fifoFromSwitchLeft = "fifo" + swi->swj + "-" + swi->swi;
+        fdToLeft = open(fifoToSwitchLeft.c_str(), O_RDWR | O_NONBLOCK);
+        if (fdToLeft == -1)
             err_sys("Unable to open fifo to left switch ");
-        }
-        maxFDS++;
+        fdFromLeft = open(fifoFromSwitchLeft.c_str(), O_RDWR | O_WRONLY);
+        if (fdFromLeft)
+            err_sys("unable to open fifo from switch left");
+        maxFDS = maxFDS + 2;
     }
     while (1)
     {
         FD_ZERO(&readFds);
         FD_SET(fd, &readFds);
-        FD_SET(fifoCont, &readFds);
+
+        FD_SET(fdToCont, &readFds);
+        FD_SET(fdFromCont, &readFds);
         if (fifoToSwitchLeft.compare("") != 0)
-            FD_SET(fifoLeft, &readFds);
+        {
+            FD_SET(fdToLeft, &readFds);
+            FD_SET(fdFromLeft, &readFds);
+        }
         if (fifoToSwitchRight.compare("") != 0)
-            FD_SET(fifoLeft, &readFds);
+        {
+            FD_SET(fdToRight, &readFds);
+            FD_SET(fdFromRight, &readFds);
+        }
         timeout.tv_sec = 0;
         timeout.tv_usec = 0;
+
         sret = select(maxFDS + 1, &readFds, NULL, NULL, &timeout);
         if (sret == -1)
             err_sys("select call error");
@@ -237,19 +281,34 @@ void switchLoop(SWI *swi)
         }
         else
         {
-            memset(buf, 0, sizeof(buf));
-            ret = read(fd, (void *)buf, sizeof(buf));
-            if (ret != -1)
+            if (FD_ISSET(0, &readFds))
             {
-                // cout << "buf = " << buf << endl;
-
-                if (strcmp(buf, "list\n") == 0)
+                memset(buf, 0, sizeof(buf));
+                ret = read(fd, (void *)buf, sizeof(buf));
+                if (ret != -1)
                 {
-                    cout << "list" << endl;
+                    if (strcmp(buf, "list\n") == 0)
+                    {
+                        cout << "list" << endl;
+                    }
+                    else if (strcmp(buf, "exit\n") == 0)
+                    {
+                        cout << "list then exit" << endl;
+                    }
                 }
-                else if (strcmp(buf, "exit\n") == 0)
+            }
+
+            if (FD_ISSET(fdFromCont, &readFds))
+            {
+                cout << "bout to give up" << endl;
+                int len = 0;
+                Packet packet;
+                memset(&packet, 0, sizeof(packet));
+                len = read(fdFromCont, (void *)&packet, sizeof(packet));
+
+                if (len != -1)
                 {
-                    cout << "list then exit" << endl;
+                    cout << packet.kind << "wassup" << endl;
                 }
             }
         }
