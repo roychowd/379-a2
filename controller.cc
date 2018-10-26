@@ -30,7 +30,6 @@ static vector<fifoStruct> setUpFifos(int nswitch)
 	return fifos;
 }
 
-
 void detectController(char **argv, Controller *controller)
 {
 	cout << "detect control called " << endl;
@@ -51,18 +50,29 @@ void detectController(char **argv, Controller *controller)
 	}
 }
 
-
 // READs incoming signals
 static KIND readPacket(std::vector<fifoStruct>::iterator it)
 {
+	// ANCHOR  READ-PACKET
 	int len = 0;
 	// Packet pkt;
 	// memset((Packet *) &pkt, 0, sizeof(pkt));
-	char *c = (char *) calloc(1024, sizeof(char)); 
-	// cout << "omsdfagdf " << len << sizeof(Packet) << endl;
-	len = read(it->fileDescriptorSwiToCont,  c, 1024);
-	cout << "the message is... " << c << len << endl;
-	// cout << "omsdfagdf " << len << sizeof(pkt) << endl;	
+	char *c = (char *)calloc(1024, sizeof(char));
+	len = read(it->fileDescriptorSwiToCont, c, 1024);
+	string messageString = string(c);
+	cout << messageString << endl;
+	size_t pos = messageString.find(" ");
+	size_t initialPosition = 0;
+	std::vector<string> tokens;
+	while (pos != std::string::npos)
+	{
+		tokens.push_back(messageString.substr(initialPosition, pos - initialPosition));
+		initialPosition = pos + 1;
+		pos = messageString.find(" ", initialPosition);
+	}
+	tokens.push_back(messageString.substr(initialPosition, std::min(pos, messageString.size()) - initialPosition + 1));
+	cout << tokens.back() << endl;
+	// cout << "omsdfagdf " << len << sizeof(pkt) << endl;
 	// if (len == sizeof(pkt))
 	// {
 	// 	cout << "wowwwowow" << endl;
@@ -74,7 +84,6 @@ static KIND readPacket(std::vector<fifoStruct>::iterator it)
 	// 	// 	return NONE;
 	// 	// }
 	// }
-	cout << "end here" << endl;
 	return NONE;
 }
 
