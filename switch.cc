@@ -162,7 +162,9 @@ static void sendToFifo(string fifoname, Packet *packet, int fd)
     assert(fd >= 0);
     // cout << sizeof(&packet) << "ad" << sizeof(Packet);
     // write(fd, &packet, sizeof(Packet));
-    write(fd, packet->msg.c_str(), sizeof(packet->msg.c_str()));
+    string mg = packet->msg + " " + packet->port1 + " " + packet->port2 + " " + packet->swi;
+    cout << mg.c_str() << endl;
+    write(fd, mg.c_str(), 1024);
 }
 
 static Packet prepareMessage(KIND type, SWI *swi)

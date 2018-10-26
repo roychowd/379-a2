@@ -58,10 +58,10 @@ static KIND readPacket(std::vector<fifoStruct>::iterator it)
 	int len = 0;
 	// Packet pkt;
 	// memset((Packet *) &pkt, 0, sizeof(pkt));
-	char *c = (char *) calloc(100, sizeof(char)); 
+	char *c = (char *) calloc(1024, sizeof(char)); 
 	// cout << "omsdfagdf " << len << sizeof(Packet) << endl;
-	len = read(it->fileDescriptorSwiToCont,  c, sizeof(c));
-	cout << c << endl;
+	len = read(it->fileDescriptorSwiToCont,  c, 1024);
+	cout << "the message is... " << c << len << endl;
 	// cout << "omsdfagdf " << len << sizeof(pkt) << endl;	
 	// if (len == sizeof(pkt))
 	// {
