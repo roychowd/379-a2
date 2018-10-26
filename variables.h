@@ -94,7 +94,8 @@ typedef struct
     string swi;
     string port1; //swj
     string port2; // swk
-    KIND kind;
+    string kind;
+    // KIND kind;
 } Packet;
 
 #endif

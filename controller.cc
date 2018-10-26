@@ -51,59 +51,63 @@ void detectController(char **argv, Controller *controller)
 }
 
 // READs incoming signals
-static KIND readPacket(std::vector<fifoStruct>::iterator it)
+static Packet readPacket(std::vector<fifoStruct>::iterator it)
 {
 	// ANCHOR  READ-PACKET
 	int len = 0;
 	// Packet pkt;
 	// memset((Packet *) &pkt, 0, sizeof(pkt));
-	char *c = (char *)calloc(1024, sizeof(char));
-	len = read(it->fileDescriptorSwiToCont, c, 1024);
-	string messageString = string(c);
-	cout << messageString << endl;
-	size_t pos = messageString.find(" ");
-	size_t initialPosition = 0;
-	std::vector<string> tokens;
-	while (pos != std::string::npos)
+	Packet newPacket;
+	char *c = (char *)calloc(100, sizeof(char));
+	len = read(it->fileDescriptorSwiToCont, c, 100);
+	cout << len;
+	if (len == 100)
 	{
-		tokens.push_back(messageString.substr(initialPosition, pos - initialPosition));
-		initialPosition = pos + 1;
-		pos = messageString.find(" ", initialPosition);
+		string messageString = string(c);
+		cout << messageString << endl;
+		size_t pos = messageString.find(" ");
+		size_t initialPosition = 0;
+		std::vector<string> tokens;
+		while (pos != std::string::npos)
+		{
+			tokens.push_back(messageString.substr(initialPosition, pos - initialPosition));
+			initialPosition = pos + 1;
+			pos = messageString.find(" ", initialPosition);
+		}
+		tokens.push_back(messageString.substr(initialPosition, std::min(pos, messageString.size()) - initialPosition + 1));
+		newPacket.kind = tokens.at(4);
+		newPacket.msg = tokens.at(0);
+		newPacket.port1 = tokens.at(1);
+		newPacket.port2 = tokens.at(2);
+		newPacket.swi = tokens.at(3);
+		return newPacket;
 	}
-	tokens.push_back(messageString.substr(initialPosition, std::min(pos, messageString.size()) - initialPosition + 1));
-	cout << tokens.back() << endl;
-	// cout << "omsdfagdf " << len << sizeof(pkt) << endl;
-	// if (len == sizeof(pkt))
-	// {
-	// 	cout << "wowwwowow" << endl;
-	// 	// switch (pack->kind)
-	// 	// {
-	// 	// case OPEN:
-	// 	// 	return ACK;
-	// 	// default:
-	// 	// 	return NONE;
-	// 	// }
-	// }
-	return NONE;
+
+	err_sys("Unable to read packet");
+	return newPacket;
 }
 
-static Packet createPacket(KIND type)
+static void sendToSwitch(string fifoname, string senderPacket)
 {
-	Packet packet;
-	packet.kind = type;
-	switch (type)
-	{
-	case ACK:
-		packet.msg = "";
-		packet.port1 = "";
-		packet.port2 = "";
-		packet.swi = "";
-	default:
-		return packet;
-	}
-
-	return packet;
+	int fd = open(fifoname.c_str(), O_WRONLY | O_NONBLOCK);
+	write(fd, senderPacket.c_str(), 100);
+	close(fd);
 }
+static void testType(string kind, string fifoname)
+{
+	cout << kind;
+	if (strcmp(kind.c_str(), "OPEN") == 0)
+	{
+		cout << "exeted";
+		string s = "ACK";
+		sendToSwitch(fifoname, s);
+	}
+	else
+	{
+		return;
+	}
+}
+
 void ControllerLoop(int nswitch)
 {
 	// ANCHOR  Controller Loop
@@ -126,7 +130,7 @@ void ControllerLoop(int nswitch)
 		FD_SET(fd, &readFds);
 		for (int x = 0; x < fifos.size(); x++)
 		{
-			FD_SET(fifos.at(x).fileDescriptorContToSwi, &readFds);
+			// FD_SET(fifos.at(x).fileDescriptorContToSwi, &readFds);
 			FD_SET(fifos.at(x).fileDescriptorSwiToCont, &readFds);
 		}
 		timeout.tv_sec = 1;
@@ -169,8 +173,11 @@ void ControllerLoop(int nswitch)
 
 				if (FD_ISSET(it->fileDescriptorSwiToCont, &readFds))
 				{
-					Packet packSend;
-					KIND type = readPacket(it);
+					Packet packRecieve;
+					packRecieve = readPacket(it);
+					// cout << packRecieve.kind << endl;
+					testType(packRecieve.kind, it->fifoNameContToSwi);
+					cout << "written to " << it->fifoNameContToSwi << endl;
 					// cout << "returned here" << endl;
 					// packSend = createPacket(type);
 					// cout << "writing to fifo" << endl;

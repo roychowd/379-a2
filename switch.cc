@@ -162,13 +162,15 @@ static void sendToFifo(string fifoname, Packet *packet, int fd)
     assert(fd >= 0);
     // cout << sizeof(&packet) << "ad" << sizeof(Packet);
     // write(fd, &packet, sizeof(Packet));
-    string mg = packet->msg + " " + packet->port1 + " " + packet->port2 + " " + packet->swi;
-    cout << mg.c_str() << endl;
-    write(fd, mg.c_str(), 1024);
+    string mg = packet->msg + " " + packet->port1 + " " + packet->port2 + " " + packet->swi + " " + packet->kind;
+    write(fd, mg.c_str(), 100);
+    close(fd);
+    return;
 }
 
-static Packet prepareMessage(KIND type, SWI *swi)
+static Packet prepareMessage(string type, SWI *swi)
 {
+    // ANCHOR  Prepare Message
     Packet packet;
     // memset((char *) &packet,0,sizeof(packet));
     packet.swi = "sw" + swi->swi;
@@ -198,14 +200,14 @@ void switchLoop(SWI *swi)
     fd_set readFds;  // readfds - fdset data strucutre
     int type = 0;    //  may need this later
     timeval timeout; // time out structure for switchloop
-                     // vector<fifoStruct> fifos = setupSwitchFifos(swi->);
+
     int fdToCont, fdFromCont, fdToLeft, fdToRight, fdFromLeft, fdFromRight = 0;
     string fifoToSwitchLeft, fifoFromSwitchLeft, fifoToSwitchRight, fifoFromSwitchRight = "";
 
     // creates controller fifos
     string fifoToController = "fifo-" + swi->swi + "-0";  // open for writing to controller
     string fifoControllerToSwitch = "fifo-0-" + swi->swi; // open for reading from controller
-
+    cout << fifoControllerToSwitch << endl;
     // ================================ OPEN FIFO To Controller FOR WRITING TO CONTROLLER (fifo-swi-0) ===============================================
     fdToCont = open(fifoToController.c_str(), O_RDWR | O_NONBLOCK);
     if (fdToCont == -1)
@@ -213,7 +215,7 @@ void switchLoop(SWI *swi)
     maxFDS++;
 
     // openpacket needs to be sent to controller! - prepare the message to be sent to controller
-    Packet openpacket = prepareMessage(OPEN, swi);
+    Packet openpacket = prepareMessage("OPEN", swi);
     sendToFifo(fifoToController, &openpacket, fdToCont);
 
     // ================================ OPEN FIFO From Controller (fifo-0-swi)  FOR READING FROM CONTROLLER =========================================
@@ -273,14 +275,14 @@ void switchLoop(SWI *swi)
         //     FD_SET(fdFromRight, &readFds);
         // }
         timeout.tv_sec = 0;
-        timeout.tv_usec = 1;
+        timeout.tv_usec = 0;
 
-        sret = select(5, &readFds, NULL, NULL, &timeout);
+        sret = select(4, &readFds, NULL, NULL, &timeout);
         if (sret == -1)
             err_sys("select call error");
         else if (sret)
         {
-            
+
             if (FD_ISSET(0, &readFds))
             {
                 memset(buf, 0, sizeof(buf));
@@ -297,17 +299,16 @@ void switchLoop(SWI *swi)
                     }
                 }
             }
-            else if (FD_ISSET(fdFromCont, &readFds))
+            if (FD_ISSET(fdFromCont, &readFds))
             {
-                cout << "bout to give up" << endl;
                 int len = 0;
-                Packet packet;
-                memset(&packet, 0, sizeof(packet));
-                len = read(fdFromCont, &packet, sizeof(packet));
-
-                if (len != -1)
+                char *recieve = (char *)calloc(100, sizeof(char));
+                len = read(fdFromCont, recieve, 100);
+                if (len == 100)
                 {
-                    cout << packet.kind << "wassup" << endl;
+                    cout << recieve << endl;
+                    cout << "bout to give up";
+                    cout << recieve << endl;
                 }
             }
         }
