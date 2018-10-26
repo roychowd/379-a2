@@ -75,32 +75,12 @@ int main(int argc, char **argv)
 		SWI swi;
 		packetStats stats;
 		detectSwitch(argv, &swi);
-
-		// switch loop //
-
-		// ========= SET UP FIFOS =============== //
-
-		// set up fifo with switch swi to controller (0) at port 1
-		// int code = mkfifo("fifo-1-0", 0666);
-		// if (code == -1) {
-		// 	perror("Cannot open Fifo as it already exists");
-		// 	return EXIT_FAILURE;
-		// }
-
-		// set up fifo with switch at port 2
-
-		// set up fifo with switch at port 4
-
 		vector<flowEntry> flowtable;
 		initializeCurrentFlowEntry(&swi, flowtable);
 		// start a loop and monitor process via poll/select
-
-		readFILE(swi.filename, &swi, &stats, flowtable);
+		// readFILE(swi.filename, &swi, &stats, flowtable);
 		// start loop
 		switchLoop(&swi);
-		
-
-
 	}
 	return 1;
 }

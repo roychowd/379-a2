@@ -19,12 +19,7 @@ static vector<fifoStruct> setUpFifos(int nswitch)
 		fifo.fifoNameSwiToCont = fifoname + to_string(index) + "-0"; // means fifo-x-0 <-- needs to be open for reading
 		fifo.fileDescriptorContToSwi = open(fifo.fifoNameContToSwi.c_str(), O_RDONLY | O_NONBLOCK);
 		fifo.fileDescriptorSwiToCont = open(fifo.fifoNameSwiToCont.c_str(), O_RDWR | O_NONBLOCK);
-		// fifoStruct fifo, fifo2;
-		// fifo2.FifoName = fifoname + "0-" + to_string(index);
-		// fifo.FifoName = fifoname + to_string(index) + "-0";
-		// cout << fifo2.FifoName << endl;
-		// fifo.fileDescriptor = open(fifo.FifoName.c_str(), O_RDONLY | O_NONBLOCK);
-		// fifo2.fileDescriptor = open(fifo2.FifoName.c_str(), O_RDWR | O_NONBLOCK);
+
 		if (fifo.fileDescriptorContToSwi == -1 || fifo.fileDescriptorSwiToCont == -1)
 		{
 			err_sys("Error opening FIFO's. MAKE CLEAN and then run MAKE");
@@ -54,11 +49,6 @@ void detectController(char **argv, Controller *controller)
 	}
 }
 
-// void startFIFOControllerToSwitch(SWI *swi)
-// {
-// 	string fifoname = "fifo-0-" + swi->swi;
-// }
-
 // READs incoming signals
 static KIND readPacket(std::vector<fifoStruct>::iterator it)
 {
@@ -66,15 +56,8 @@ static KIND readPacket(std::vector<fifoStruct>::iterator it)
 	Packet packet;
 	memset(&packet, 0, sizeof(packet));
 	len = read(it->fileDescriptorSwiToCont, (void *)&packet, sizeof(packet));
-	// cout << len << endl;
 	if (len != -1)
 	{
-		// cout << packet.swi << endl;
-		// cout << packet.port1 << endl;
-		// cout << packet.port2 << endl;
-		// cout << packet.kind << endl;
-		// cout << packet.msg << endl;
-
 		switch (packet.kind)
 		{
 		case OPEN:
@@ -115,6 +98,10 @@ void ControllerLoop(int nswitch)
 	int type = 0;
 	timeval timeout;
 	vector<fifoStruct> fifos = setUpFifos(nswitch);
+	if (nswitch == 1)
+	{
+		maxFDS = 4;
+	}
 	while (1)
 	{
 		FD_ZERO(&readFds);
@@ -122,11 +109,16 @@ void ControllerLoop(int nswitch)
 		for (int x = 0; x < fifos.size(); x++)
 		{
 			// set fds for select includes all open fifos
+			// cout << fifos.at(x).fileDescriptorContToSwi << endl;
+			// cout << fifos.at(x).fileDescriptorSwiToCont << endl;
+			// cout << fifos.at(x).fifoNameSwiToCont << endl;
+			// cout << fifos.at(x).fifoNameContToSwi << endl;
 			FD_SET(fifos.at(x).fileDescriptorContToSwi, &readFds);
 			FD_SET(fifos.at(x).fileDescriptorSwiToCont, &readFds);
 		}
-		timeout.tv_sec = 0;
+		timeout.tv_sec = 1;
 		timeout.tv_usec = 0;
+
 		sret = select(maxFDS + 1, &readFds, NULL, NULL, &timeout);
 		if (sret == -1)
 		{
@@ -134,11 +126,6 @@ void ControllerLoop(int nswitch)
 		}
 		if (sret == 0)
 		{
-
-			// }
-
-			// may need to delete this
-
 			if (type == 0)
 			{
 			}
@@ -166,18 +153,16 @@ void ControllerLoop(int nswitch)
 
 			for (std::vector<fifoStruct>::iterator it = fifos.begin(); it != fifos.end(); ++it)
 			{
-				/* std::cout << *it; ... */
+
 				if (FD_ISSET(it->fileDescriptorSwiToCont, &readFds))
 				{
 					Packet packSend;
 					KIND type = readPacket(it);
 					packSend = createPacket(type);
-					cout << "type " << type << "kind " << packSend.kind << endl;
-					write(it->fileDescriptorContToSwi, &packSend, sizeof(packSend));
-
-					// if (FD_ISSET(it->fileDescriptorContToSwi, &readFds))
-					// {
-					// }
+					cout << "writing to fifo" << endl;
+					int asd = open("fifo-0-1", O_WRONLY | O_NONBLOCK);
+					assert(asd >= 0);
+					write(asd, &packSend, sizeof(packSend));
 				}
 			}
 		}

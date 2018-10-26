@@ -206,81 +206,76 @@ void switchLoop(SWI *swi)
     if (fdToCont == -1)
         err_sys("unable to open fifo to controller ");
     maxFDS++;
+
     // openpacket needs to be sent to controller! - prepare the message to be sent to controller
     Packet openpacket = prepareMessage(OPEN, swi);
     sendToFifo(fifoToController, openpacket, fdToCont);
+
     // ================================ OPEN FIFO From Controller (fifo-0-swi)  FOR READING FROM CONTROLLER =========================================
+    // cout << fifoControllerToSwitch << endl;
     fdFromCont = open(fifoControllerToSwitch.c_str(), O_RDONLY | O_NONBLOCK);
     if (fdFromCont == -1)
     {
         err_sys("unable to open fifo from controller");
     }
-    cout << fdFromCont;
-
     maxFDS++;
 
-    if (swi->swk.compare("") != 0)
-    {
-        fifoToSwitchRight = "fifo-" + swi->swi + "-" + swi->swk;
-        fifoFromSwitchRight = "fifo" + swi->swk + "-" + swi->swi;
+    // if (swi->swk.compare("") != 0)
+    // {
+    //     fifoToSwitchRight = "fifo-" + swi->swi + "-" + swi->swk;
+    //     fifoFromSwitchRight = "fifo" + swi->swk + "-" + swi->swi;
 
-        // ====================== OPEN FIFO TO SWITCH RIGHT AND FIFO FROM SWITCH RIGHT ================================ //
-        fdToRight = open(fifoToSwitchRight.c_str(), O_RDWR | O_NONBLOCK);
-        if (fdToRight == -1)
-            err_sys("Unable to open fifo to right switch");
-        maxFDS++;
+    //     // ====================== OPEN FIFO TO SWITCH RIGHT AND FIFO FROM SWITCH RIGHT ================================ //
+    //     fdToRight = open(fifoToSwitchRight.c_str(), O_RDWR | O_NONBLOCK);
+    //     if (fdToRight == -1)
+    //         err_sys("Unable to open fifo to right switch");
+    //     maxFDS++;
 
-        // needs read access
-        fdToLeft = open(fifoFromSwitchRight.c_str(), O_RDWR | O_NONBLOCK);
-        if (fdToLeft == -1)
-            err_sys("Unable to open fifo from right switch");
-        maxFDS++;
-    }
+    //     // needs read access
+    //     fdToLeft = open(fifoFromSwitchRight.c_str(), O_RDWR | O_NONBLOCK);
+    //     if (fdToLeft == -1)
+    //         err_sys("Unable to open fifo from right switch");
+    //     maxFDS++;
+    // }
 
-    if (swi->swj.compare("") != 0)
-    {
-        fifoToSwitchLeft = "fifo-" + swi->swi + "-" + swi->swj;
-        fifoFromSwitchLeft = "fifo" + swi->swj + "-" + swi->swi;
-        fdToLeft = open(fifoToSwitchLeft.c_str(), O_RDWR | O_NONBLOCK);
-        if (fdToLeft == -1)
-            err_sys("Unable to open fifo to left switch ");
-        fdFromLeft = open(fifoFromSwitchLeft.c_str(), O_RDWR | O_WRONLY);
-        if (fdFromLeft)
-            err_sys("unable to open fifo from switch left");
-        maxFDS = maxFDS + 2;
-    }
+    // if (swi->swj.compare("") != 0)
+    // {
+    //     fifoToSwitchLeft = "fifo-" + swi->swi + "-" + swi->swj;
+    //     fifoFromSwitchLeft = "fifo" + swi->swj + "-" + swi->swi;
+    //     fdToLeft = open(fifoToSwitchLeft.c_str(), O_RDWR | O_NONBLOCK);
+    //     if (fdToLeft == -1)
+    //         err_sys("Unable to open fifo to left switch ");
+    //     fdFromLeft = open(fifoFromSwitchLeft.c_str(), O_RDWR | O_WRONLY);
+    //     if (fdFromLeft)
+    //         err_sys("unable to open fifo from switch left");
+    //     maxFDS = maxFDS + 2;
+    // }
     while (1)
     {
         FD_ZERO(&readFds);
         FD_SET(fd, &readFds);
-
         FD_SET(fdToCont, &readFds);
         FD_SET(fdFromCont, &readFds);
-        if (fifoToSwitchLeft.compare("") != 0)
-        {
-            FD_SET(fdToLeft, &readFds);
-            FD_SET(fdFromLeft, &readFds);
-        }
-        if (fifoToSwitchRight.compare("") != 0)
-        {
-            FD_SET(fdToRight, &readFds);
-            FD_SET(fdFromRight, &readFds);
-        }
-        timeout.tv_sec = 0;
-        timeout.tv_usec = 0;
+        // if (fifoToSwitchLeft.compare("") != 0)
+        // {
 
-        sret = select(maxFDS + 1, &readFds, NULL, NULL, &timeout);
+        //     FD_SET(fdToLeft, &readFds);
+        //     FD_SET(fdFromLeft, &readFds);
+        // }
+        // if (fifoToSwitchRight.compare("") != 0)
+        // {
+        //     FD_SET(fdToRight, &readFds);
+        //     FD_SET(fdFromRight, &readFds);
+        // }
+        timeout.tv_sec = 0;
+        timeout.tv_usec = 1;
+
+        sret = select(5, &readFds, NULL, NULL, &timeout);
         if (sret == -1)
             err_sys("select call error");
-        if (sret == 0)
+        else if (sret)
         {
-            if (type == 0)
-            {
-                continue;
-            }
-        }
-        else
-        {
+            
             if (FD_ISSET(0, &readFds))
             {
                 memset(buf, 0, sizeof(buf));
@@ -297,14 +292,13 @@ void switchLoop(SWI *swi)
                     }
                 }
             }
-
-            if (FD_ISSET(fdFromCont, &readFds))
+            else if (FD_ISSET(fdFromCont, &readFds))
             {
                 cout << "bout to give up" << endl;
                 int len = 0;
                 Packet packet;
                 memset(&packet, 0, sizeof(packet));
-                len = read(fdFromCont, (void *)&packet, sizeof(packet));
+                len = read(fdFromCont, &packet, sizeof(packet));
 
                 if (len != -1)
                 {
