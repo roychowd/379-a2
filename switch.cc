@@ -112,60 +112,63 @@ static void createNewFlowEntry(size_t index, vector<flowEntry> &flowtable, strin
     flowtable[flowtable.size() - 1].pktcount = 1;
 }
 
-// what am i doing with my life
-void readFILE(string filename, SWI *swi, packetStats *stats, vector<flowEntry> flowtable)
-{
-    // re do this with io multiplexing and query and stuff
+// // what am i doing with my life
+// void readFILE(string filename, SWI *swi, packetStats *stats, vector<flowEntry> flowtable)
+// {
+//     // re do this with io multiplexing and query and stuff
 
-    string line;
-    ifstream myfile;
-    myfile.open(filename.c_str());
-    if (myfile.is_open())
-    {
-        while (getline(myfile, line))
-        {
-            if ((line.find("sw" + swi->swi) != std::string::npos) && (strstr(line.c_str(), "#") == NULL))
-            {
-                // NOTE i separated whitespace using this resource: https://stackoverflow.com/questions/236129/how-do-i-iterate-over-the-words-of-a-string?rq=1
-                // all created for separating whitespace from string goes to user Zunino on stack overflow
-                istringstream li(line);
-                vector<string> tokens{istream_iterator<string>{li}, istream_iterator<string>{}};
-                if (atoi(tokens.at(1).c_str()) >= swi->IP_LOW && atoi(tokens.at(2).c_str()) <= swi->IP_HIGH)
-                {
-                    stats->ADMIT++;
-                    flowtable[0].pktcount++;
-                }
-                else
-                {
-                    // create a new entry in flowtable
-                    int size = flowtable.size();
-                    for (int i = 0; i < size; i++)
-                    {
-                        if (atoi(tokens.at(1).c_str()) >= flowtable.at(i).destIP_lo && atoi(tokens.at(2).c_str()) <= flowtable.at(i).destIP_hi)
-                        {
-                            flowtable.at(i).pktcount++;
-                            break;
-                        }
-                        else if (i == size - 1)
-                        {
-                            createNewFlowEntry(flowtable.size(), flowtable, tokens.at(1), tokens.at(2));
-                        }
-                    }
-                }
-            }
-        }
-    }
-}
+//     string line;
+//     ifstream myfile;
+//     myfile.open(filename.c_str());
+//     if (myfile.is_open())
+//     {
+//         while (getline(myfile, line))
+//         {
+//             if ((line.find("sw" + swi->swi) != std::string::npos) && (strstr(line.c_str(), "#") == NULL))
+//             {
+//                 // NOTE i separated whitespace using this resource: https://stackoverflow.com/questions/236129/how-do-i-iterate-over-the-words-of-a-string?rq=1
+//                 // all created for separating whitespace from string goes to user Zunino on stack overflow
+//                 istringstream li(line);
+//                 vector<string> tokens{istream_iterator<string>{li}, istream_iterator<string>{}};
+//                 if (atoi(tokens.at(1).c_str()) >= swi->IP_LOW && atoi(tokens.at(2).c_str()) <= swi->IP_HIGH)
+//                 {
+//                     stats->ADMIT++;
+//                     flowtable[0].pktcount++;
+//                 }
+//                 else
+//                 {
+//                     // create a new entry in flowtable
+//                     int size = flowtable.size();
+//                     for (int i = 0; i < size; i++)
+//                     {
+//                         if (atoi(tokens.at(1).c_str()) >= flowtable.at(i).destIP_lo && atoi(tokens.at(2).c_str()) <= flowtable.at(i).destIP_hi)
+//                         {
+//                             flowtable.at(i).pktcount++;
+//                             break;
+//                         }
+//                         else if (i == size - 1)
+//                         {
+//                             createNewFlowEntry(flowtable.size(), flowtable, tokens.at(1), tokens.at(2));
+//                         }
+//                     }
+//                 }
+//             }
+//         }
+//     }
+// }
 
-static void sendToFifo(string fifoname, Packet packet, int fd)
+static void sendToFifo(string fifoname, Packet *packet, int fd)
 {
     assert(fd >= 0);
-    write(fd, &packet, sizeof(packet));
+    // cout << sizeof(&packet) << "ad" << sizeof(Packet);
+    // write(fd, &packet, sizeof(Packet));
+    write(fd, packet->msg.c_str(), sizeof(packet->msg.c_str()));
 }
 
 static Packet prepareMessage(KIND type, SWI *swi)
 {
     Packet packet;
+    // memset((char *) &packet,0,sizeof(packet));
     packet.swi = "sw" + swi->swi;
     packet.port1 = swi->swj;
     packet.port2 = swi->swk;
@@ -209,7 +212,7 @@ void switchLoop(SWI *swi)
 
     // openpacket needs to be sent to controller! - prepare the message to be sent to controller
     Packet openpacket = prepareMessage(OPEN, swi);
-    sendToFifo(fifoToController, openpacket, fdToCont);
+    sendToFifo(fifoToController, &openpacket, fdToCont);
 
     // ================================ OPEN FIFO From Controller (fifo-0-swi)  FOR READING FROM CONTROLLER =========================================
     // cout << fifoControllerToSwitch << endl;

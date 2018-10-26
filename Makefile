@@ -13,7 +13,7 @@ controller.o: controller.cc variables.h controller.h
 	g++ -std=c++11 -Wall -c controller.cc
 
 switch.o: switch.cc variables.h switch.h
-	g++ -std=c++11 -Wall -c switch.cc
+	g++ -std=c++11 -g -Wall -c switch.cc
 
 fifo:
 	mkfifo fifo-1-0

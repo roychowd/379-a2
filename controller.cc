@@ -29,6 +29,8 @@ static vector<fifoStruct> setUpFifos(int nswitch)
 	}
 	return fifos;
 }
+
+
 void detectController(char **argv, Controller *controller)
 {
 	cout << "detect control called " << endl;
@@ -49,23 +51,30 @@ void detectController(char **argv, Controller *controller)
 	}
 }
 
+
 // READs incoming signals
 static KIND readPacket(std::vector<fifoStruct>::iterator it)
 {
 	int len = 0;
-	Packet packet;
-	memset(&packet, 0, sizeof(packet));
-	len = read(it->fileDescriptorSwiToCont, (void *)&packet, sizeof(packet));
-	if (len != -1)
-	{
-		switch (packet.kind)
-		{
-		case OPEN:
-			return ACK;
-		default:
-			return NONE;
-		}
-	}
+	// Packet pkt;
+	// memset((Packet *) &pkt, 0, sizeof(pkt));
+	char *c = (char *) calloc(100, sizeof(char)); 
+	// cout << "omsdfagdf " << len << sizeof(Packet) << endl;
+	len = read(it->fileDescriptorSwiToCont,  c, sizeof(c));
+	cout << c << endl;
+	// cout << "omsdfagdf " << len << sizeof(pkt) << endl;	
+	// if (len == sizeof(pkt))
+	// {
+	// 	cout << "wowwwowow" << endl;
+	// 	// switch (pack->kind)
+	// 	// {
+	// 	// case OPEN:
+	// 	// 	return ACK;
+	// 	// default:
+	// 	// 	return NONE;
+	// 	// }
+	// }
+	cout << "end here" << endl;
 	return NONE;
 }
 
@@ -108,11 +117,6 @@ void ControllerLoop(int nswitch)
 		FD_SET(fd, &readFds);
 		for (int x = 0; x < fifos.size(); x++)
 		{
-			// set fds for select includes all open fifos
-			// cout << fifos.at(x).fileDescriptorContToSwi << endl;
-			// cout << fifos.at(x).fileDescriptorSwiToCont << endl;
-			// cout << fifos.at(x).fifoNameSwiToCont << endl;
-			// cout << fifos.at(x).fifoNameContToSwi << endl;
 			FD_SET(fifos.at(x).fileDescriptorContToSwi, &readFds);
 			FD_SET(fifos.at(x).fileDescriptorSwiToCont, &readFds);
 		}
@@ -158,11 +162,12 @@ void ControllerLoop(int nswitch)
 				{
 					Packet packSend;
 					KIND type = readPacket(it);
-					packSend = createPacket(type);
-					cout << "writing to fifo" << endl;
-					int asd = open("fifo-0-1", O_WRONLY | O_NONBLOCK);
-					assert(asd >= 0);
-					write(asd, &packSend, sizeof(packSend));
+					// cout << "returned here" << endl;
+					// packSend = createPacket(type);
+					// cout << "writing to fifo" << endl;
+					// int asd = open("fifo-0-1", O_WRONLY | O_NONBLOCK);
+					// assert(asd >= 0);
+					// write(asd, &packSend, sizeof(packSend));
 				}
 			}
 		}
