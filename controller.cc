@@ -15,17 +15,16 @@ static vector<fifoStruct> setUpFifos(int nswitch)
 	for (int index = 1; index <= nswitch; index++)
 	{
 		fifoStruct fifo;
-		fifo.fifoNameContToSwi = fifoname + "0-" + to_string(index); // means fifo-0-x <-- needs to be open for writing
+		fifo.fifoNameContToSwi = fifoname + "0-" + to_string(index); // means fifo-0-x
 		fifo.fifoNameSwiToCont = fifoname + to_string(index) + "-0"; // means fifo-x-0 <-- needs to be open for reading
-		fifo.fileDescriptorContToSwi = open(fifo.fifoNameContToSwi.c_str(), O_RDONLY | O_NONBLOCK);
-		fifo.fileDescriptorSwiToCont = open(fifo.fifoNameSwiToCont.c_str(), O_RDWR | O_NONBLOCK);
+		// fifo.fileDescriptorContToSwi = open(fifo.fifoNameContToSwi.c_str(), O_RDONLY | O_NONBLOCK);
+		fifo.fileDescriptorSwiToCont = open(fifo.fifoNameSwiToCont.c_str(), O_RDONLY | O_NONBLOCK);
 
-		if (fifo.fileDescriptorContToSwi == -1 || fifo.fileDescriptorSwiToCont == -1)
+		if (fifo.fileDescriptorSwiToCont == -1)
 		{
 			err_sys("Error opening FIFO's. MAKE CLEAN and then run MAKE");
 		}
 		fifos.push_back(fifo);
-		maxFDS += 2;
 	}
 	return fifos;
 }
@@ -60,11 +59,9 @@ static Packet readPacket(std::vector<fifoStruct>::iterator it)
 	Packet newPacket;
 	char *c = (char *)calloc(100, sizeof(char));
 	len = read(it->fileDescriptorSwiToCont, c, 100);
-	cout << len;
-	if (len == 100)
+	if (len != -1 && strlen(c) != 0)
 	{
 		string messageString = string(c);
-		cout << messageString << endl;
 		size_t pos = messageString.find(" ");
 		size_t initialPosition = 0;
 		std::vector<string> tokens;
@@ -80,11 +77,15 @@ static Packet readPacket(std::vector<fifoStruct>::iterator it)
 		newPacket.port1 = tokens.at(1);
 		newPacket.port2 = tokens.at(2);
 		newPacket.swi = tokens.at(3);
+
 		return newPacket;
 	}
+	else
+	{
 
-	err_sys("Unable to read packet");
-	return newPacket;
+		newPacket.kind = "";
+		return newPacket;
+	}
 }
 
 static void sendToSwitch(string fifoname, string senderPacket)
@@ -115,19 +116,34 @@ void ControllerLoop(int nswitch)
 	// set of file descriptors ( need to monitor conncections to stdin and piping information!!! )
 	int fd = 0; // stdin = 0;
 	char buf[1025];
+	// int maxFDS = 1;
 	int ret, sret;
 	fd_set readFds;
 	int type = 0;
 	timeval timeout;
 	vector<fifoStruct> fifos = setUpFifos(nswitch);
-	if (nswitch == 1)
+
+	// if (nswitch == 1)
+	// {
+	// 	maxFDS = 4;
+	// }
+	// cout << maxFDS << endl;
+	int maxfd = 0;
+	for (int x = 0; x < fifos.size(); x++)
 	{
-		maxFDS = 4;
+		// FD_SET(fifos.at(x).fileDescriptorContToSwi, &readFds);
+		if (fifos.at(x).fileDescriptorSwiToCont > maxfd)
+		{
+			maxfd = fifos.at(x).fileDescriptorSwiToCont;
+		}
 	}
+	cout << "maxfd is " << maxfd << endl;
+
 	while (1)
 	{
 		FD_ZERO(&readFds);
 		FD_SET(fd, &readFds);
+
 		for (int x = 0; x < fifos.size(); x++)
 		{
 			// FD_SET(fifos.at(x).fileDescriptorContToSwi, &readFds);
@@ -136,7 +152,7 @@ void ControllerLoop(int nswitch)
 		timeout.tv_sec = 1;
 		timeout.tv_usec = 0;
 
-		sret = select(maxFDS + 1, &readFds, NULL, NULL, &timeout);
+		sret = select(maxfd + 1, &readFds, NULL, NULL, &timeout);
 		if (sret == -1)
 		{
 			err_sys("Select call error");
@@ -152,7 +168,6 @@ void ControllerLoop(int nswitch)
 
 			if (FD_ISSET(0, &readFds))
 			{
-				cout << sret << endl;
 				memset(buf, 0, sizeof(buf));
 				ret = read(fd, (void *)buf, sizeof(buf));
 				if (ret != -1)
@@ -176,7 +191,14 @@ void ControllerLoop(int nswitch)
 					Packet packRecieve;
 					packRecieve = readPacket(it);
 					// cout << packRecieve.kind << endl;
-					testType(packRecieve.kind, it->fifoNameContToSwi);
+					if (strcmp(packRecieve.kind.c_str(), "") != 0)
+					{
+						testType(packRecieve.kind, it->fifoNameContToSwi);
+					}
+					else
+					{
+						continue;
+					}
 					cout << "written to " << it->fifoNameContToSwi << endl;
 					// cout << "returned here" << endl;
 					// packSend = createPacket(type);

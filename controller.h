@@ -4,7 +4,7 @@
 
 
 
-static int maxFDS = 1;
+// static int maxFDS = 1;
 
 void detectController(char **argv, Controller *controller);
 void startFIFOControllerToSwitch(SWI *swi);

@@ -205,9 +205,12 @@ void switchLoop(SWI *swi)
     string fifoToSwitchLeft, fifoFromSwitchLeft, fifoToSwitchRight, fifoFromSwitchRight = "";
 
     // creates controller fifos
-    string fifoToController = "fifo-" + swi->swi + "-0";  // open for writing to controller
-    string fifoControllerToSwitch = "fifo-0-" + swi->swi; // open for reading from controller
-    cout << fifoControllerToSwitch << endl;
+    // open for writing to controller
+    string fifoToController = "fifo-" + swi->swi + "-0";
+    // open for reading from controller
+    string fifoControllerToSwitch = "fifo-0-" + swi->swi;
+
+
     // ================================ OPEN FIFO To Controller FOR WRITING TO CONTROLLER (fifo-swi-0) ===============================================
     fdToCont = open(fifoToController.c_str(), O_RDWR | O_NONBLOCK);
     if (fdToCont == -1)
