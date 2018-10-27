@@ -171,7 +171,7 @@ void ControllerLoop(int nswitch, vector<flowEntryForController> &flowtable)
 			// FD_SET(fifos.at(x).fileDescriptorContToSwi, &readFds);
 			FD_SET(fifos.at(x).fileDescriptorSwiToCont, &readFds);
 		}
-		timeout.tv_sec = 1;
+		timeout.tv_sec = 10;
 		timeout.tv_usec = 0;
 
 		sret = select(maxfd + 1, &readFds, NULL, NULL, &timeout);

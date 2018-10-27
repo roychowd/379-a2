@@ -312,7 +312,7 @@ void switchLoop(SWI *swi, vector<flowEntry> &flowtable)
 
     for (std::vector<int>::size_type i = 0; i != fileDesc.size(); i++)
     {
-        /* std::cout << v[i]; ... */
+        cout << fileDesc[i] << endl;
         if (fileDesc[i] > maxFDS)
         {
             maxFDS = fileDesc[i];
@@ -334,7 +334,7 @@ void switchLoop(SWI *swi, vector<flowEntry> &flowtable)
         {
             FD_SET(fdRight, &readFds);
         }
-        timeout.tv_sec = 0;
+        timeout.tv_sec = 10;
         timeout.tv_usec = 0;
 
         sret = select(maxFDS + 1, &readFds, NULL, NULL, &timeout);
