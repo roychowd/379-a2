@@ -190,16 +190,39 @@ static Packet prepareMessage(string type, SWI *swi)
     return packet;
 }
 
+static void readTrafficFile(FILE **fdTrafficFile, string toController, SWI **swi)
+{
+    // ANCHOR  READTRAFFICFILE
+    char line[1024];
+    string currentSWI = "sw" + (*swi)->swi;
+    while (fgets(line, sizeof(line), *fdTrafficFile))
+    {
+        if (!strstr(line, "#"))
+        {
+            if (strstr(line, currentSWI.c_str()))
+            {
+                
+                puts(line);
+            }
+        }
+    }
+    // fclose(*fdTrafficFile);
+}
+
 void switchLoop(SWI *swi)
 {
     // ANCHOR SWITCHLOOP
     int fd = 0;
-    int maxFDS = 1;  // stdin = 0;
+    int maxFDS = 0;  // stdin = 0;
     char buf[1025];  // buffer to listen to list and exit
     int ret, sret;   // ret - return and sret - select return
     fd_set readFds;  // readfds - fdset data strucutre
     int type = 0;    //  may need this later
     timeval timeout; // time out structure for switchloop
+    vector<int> fileDesc;
+    fileDesc.push_back(fd);
+
+    // TODO  CREATE A SEPEPARATE FUNCTION THAT DOES THIS
 
     int fdToCont, fdFromCont, fdToLeft, fdToRight, fdFromLeft, fdFromRight = 0;
     string fifoToSwitchLeft, fifoFromSwitchLeft, fifoToSwitchRight, fifoFromSwitchRight = "";
@@ -210,26 +233,44 @@ void switchLoop(SWI *swi)
     // open for reading from controller
     string fifoControllerToSwitch = "fifo-0-" + swi->swi;
 
-
     // ================================ OPEN FIFO To Controller FOR WRITING TO CONTROLLER (fifo-swi-0) ===============================================
-    fdToCont = open(fifoToController.c_str(), O_RDWR | O_NONBLOCK);
+    fdToCont = open(fifoToController.c_str(), O_RDWR | O_NONBLOCK); // may not need this but works so im not going to change it lol
     if (fdToCont == -1)
         err_sys("unable to open fifo to controller ");
-    maxFDS++;
+    // maxFDS++;
 
     // openpacket needs to be sent to controller! - prepare the message to be sent to controller
     Packet openpacket = prepareMessage("OPEN", swi);
     sendToFifo(fifoToController, &openpacket, fdToCont);
+    close(fdToCont);
 
     // ================================ OPEN FIFO From Controller (fifo-0-swi)  FOR READING FROM CONTROLLER =========================================
-    // cout << fifoControllerToSwitch << endl;
+
     fdFromCont = open(fifoControllerToSwitch.c_str(), O_RDONLY | O_NONBLOCK);
     if (fdFromCont == -1)
     {
         err_sys("unable to open fifo from controller");
     }
-    maxFDS++;
+    // maxFDS++;
+    fileDesc.push_back(fdFromCont);
 
+    int fdTrafficFile = open(swi->filename.c_str(), O_RDONLY | O_NONBLOCK);
+    if (fdTrafficFile == -1)
+    {
+        err_sys("unable to open traffic file");
+    }
+
+    FILE *trafficFile = fdopen(fdTrafficFile, "r");
+    fileDesc.push_back(fdTrafficFile);
+
+    for (std::vector<int>::size_type i = 0; i != fileDesc.size(); i++)
+    {
+        /* std::cout << v[i]; ... */
+        if (fileDesc[i] > maxFDS)
+        {
+            maxFDS = fileDesc[i];
+        }
+    }
     // if (swi->swk.compare("") != 0)
     // {
     //     fifoToSwitchRight = "fifo-" + swi->swi + "-" + swi->swk;
@@ -264,8 +305,9 @@ void switchLoop(SWI *swi)
     {
         FD_ZERO(&readFds);
         FD_SET(fd, &readFds);
-        FD_SET(fdToCont, &readFds);
+        // FD_SET(fdToCont, &readFds);
         FD_SET(fdFromCont, &readFds);
+        FD_SET(fdTrafficFile, &readFds);
         // if (fifoToSwitchLeft.compare("") != 0)
         // {
 
@@ -280,7 +322,7 @@ void switchLoop(SWI *swi)
         timeout.tv_sec = 0;
         timeout.tv_usec = 0;
 
-        sret = select(4, &readFds, NULL, NULL, &timeout);
+        sret = select(maxFDS + 1, &readFds, NULL, NULL, &timeout);
         if (sret == -1)
             err_sys("select call error");
         else if (sret)
@@ -301,6 +343,10 @@ void switchLoop(SWI *swi)
                         cout << "list then exit" << endl;
                     }
                 }
+            }
+            if (FD_ISSET(fdTrafficFile, &readFds))
+            {
+                readTrafficFile(&trafficFile, fifoToController, &swi);
             }
             if (FD_ISSET(fdFromCont, &readFds))
             {

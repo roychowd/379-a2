@@ -200,12 +200,7 @@ void ControllerLoop(int nswitch)
 						continue;
 					}
 					cout << "written to " << it->fifoNameContToSwi << endl;
-					// cout << "returned here" << endl;
-					// packSend = createPacket(type);
-					// cout << "writing to fifo" << endl;
-					// int asd = open("fifo-0-1", O_WRONLY | O_NONBLOCK);
-					// assert(asd >= 0);
-					// write(asd, &packSend, sizeof(packSend));
+					
 				}
 			}
 		}
