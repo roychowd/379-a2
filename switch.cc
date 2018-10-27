@@ -74,88 +74,39 @@ void detectSwitch(char **argv, SWI *swi)
     return;
 }
 
-void initializeCurrentFlowEntry(SWI *swi, vector<flowEntry> &flowtable)
-{
-    // create an entry in the flow table
-    flowtable.push_back(flowEntry());
-    // set up flowtable entry
-    flowtable[0].srcIP = "0-1000";
-    flowtable[0].destIP = swi->IP_ADDR;
-    flowtable[0].srcIP_lo = 0;
-    flowtable[0].srcIP_lo = 1000;
-    flowtable[0].destIP_lo = swi->IP_LOW;
-    flowtable[0].destIP_hi = swi->IP_HIGH;
-    flowtable[0].actionType = "FORWARD";
-    flowtable[0].pri = 4;
-    flowtable[0].actionVal = 3;
-    flowtable[0].pktcount = 0;
-    // now that the flowtable is set up we need to use io multiplexing and
-
-    // read and process trafficfile
-    // read the file and ignore # and empty lines and ones that dont have the swi
-}
+// void initializeCurrentFlowEntry(SWI *swi, vector<flowEntry> &flowtable)
+// {
+//     // create an entry in the flow table
+//     flowtable.push_back(flowEntry());
+//     // set up flowtable entry for first entry
+//     flowtable[0].srcIP = "0-1000";
+//     flowtable[0].destIP = swi->IP_ADDR;
+//     flowtable[0].srcIP_lo = 0;
+//     flowtable[0].srcIP_lo = 1000;
+//     flowtable[0].destIP_lo = swi->IP_LOW;
+//     flowtable[0].destIP_hi = swi->IP_HIGH;
+//     flowtable[0].actionType = "FORWARD";
+//     flowtable[0].pri = 4;
+//     flowtable[0].actionVal = 3;
+//     flowtable[0].pktcount = 0;
+// }
 
 // I know its code duplication but im running low on sleep and i just dont care anymore at this point !!! im sorry.
-static void createNewFlowEntry(size_t index, vector<flowEntry> &flowtable, string destIPLow, string destIPHigh)
+void createNewFlowEntry(vector<flowEntry> &flowtable, int destIPLow, int destIPHigh)
 {
     // cout << "teh index is .. " << index <<
     flowtable.push_back(flowEntry());
-    flowtable[flowtable.size() - 1].srcIP = "0-1000";
-    flowtable[flowtable.size() - 1].destIP = destIPLow + "-" + destIPHigh;
-    flowtable[flowtable.size() - 1].srcIP_lo = 0;
-    flowtable[flowtable.size() - 1].srcIP_lo = 1000;
-    flowtable[flowtable.size() - 1].destIP_lo = atoi(destIPLow.c_str());
-    flowtable[flowtable.size() - 1].destIP_hi = atoi(destIPHigh.c_str());
-    flowtable[flowtable.size() - 1].actionType = "FORWARD";
-    flowtable[flowtable.size() - 1].pri = 4;
-    flowtable[flowtable.size() - 1].actionVal = 3;
-    flowtable[flowtable.size() - 1].pktcount = 1;
+    flowtable.back().srcIP = "0-1000";
+    flowtable.back().destIP = to_string(destIPLow) + "-" + to_string(destIPHigh);
+    flowtable.back().srcIP_lo = 0;
+    flowtable.back().srcIP_lo = 1000;
+    flowtable.back().destIP_lo = destIPLow;
+    flowtable.back().destIP_hi = destIPHigh;
+    flowtable.back().actionType = "FORWARD:1";
+    flowtable.back().pri = 4;
+    flowtable.back().actionVal = 3;
+    flowtable.back().pktcount = 0;
 }
-
-// // what am i doing with my life
-// void readFILE(string filename, SWI *swi, packetStats *stats, vector<flowEntry> flowtable)
-// {
-//     // re do this with io multiplexing and query and stuff
-
-//     string line;
-//     ifstream myfile;
-//     myfile.open(filename.c_str());
-//     if (myfile.is_open())
-//     {
-//         while (getline(myfile, line))
-//         {
-//             if ((line.find("sw" + swi->swi) != std::string::npos) && (strstr(line.c_str(), "#") == NULL))
-//             {
-//                 // NOTE i separated whitespace using this resource: https://stackoverflow.com/questions/236129/how-do-i-iterate-over-the-words-of-a-string?rq=1
-//                 // all created for separating whitespace from string goes to user Zunino on stack overflow
-//                 istringstream li(line);
-//                 vector<string> tokens{istream_iterator<string>{li}, istream_iterator<string>{}};
-//                 if (atoi(tokens.at(1).c_str()) >= swi->IP_LOW && atoi(tokens.at(2).c_str()) <= swi->IP_HIGH)
-//                 {
-//                     stats->ADMIT++;
-//                     flowtable[0].pktcount++;
-//                 }
-//                 else
-//                 {
-//                     // create a new entry in flowtable
-//                     int size = flowtable.size();
-//                     for (int i = 0; i < size; i++)
-//                     {
-//                         if (atoi(tokens.at(1).c_str()) >= flowtable.at(i).destIP_lo && atoi(tokens.at(2).c_str()) <= flowtable.at(i).destIP_hi)
-//                         {
-//                             flowtable.at(i).pktcount++;
-//                             break;
-//                         }
-//                         else if (i == size - 1)
-//                         {
-//                             createNewFlowEntry(flowtable.size(), flowtable, tokens.at(1), tokens.at(2));
-//                         }
-//                     }
-//                 }
-//             }
-//         }
-//     }
-// }
 
 static void sendToFifo(string fifoname, Packet *packet, int fd)
 {
@@ -190,7 +141,24 @@ static Packet prepareMessage(string type, SWI *swi)
     return packet;
 }
 
-static void readTrafficFile(FILE **fdTrafficFile, string toController, SWI **swi)
+static void grabIntsFromLine(int *IP, int n, char *line)
+{
+    char *tok = strtok(line, " \n");
+    int counter = 0;
+    while (tok != NULL)
+    {
+        if (counter > 0 && counter <= n)
+        {
+            int x = atoi(tok);
+            IP[counter - 1] = x;
+        }
+        counter++;
+        tok = strtok(NULL, " \n");
+    }
+    return;
+}
+
+static void readTrafficFile(FILE **fdTrafficFile, string toController, SWI **swi, vector<flowEntry> &flowtable)
 {
     // ANCHOR  READTRAFFICFILE
     char line[1024];
@@ -201,15 +169,40 @@ static void readTrafficFile(FILE **fdTrafficFile, string toController, SWI **swi
         {
             if (strstr(line, currentSWI.c_str()))
             {
-                
-                puts(line);
+                // cout << line << endl;
+                int IP[2]; // create a array of 2 ints specified for both ip ranges
+                grabIntsFromLine(IP, 2, line);
+                // cout << IP[0] << IP[1] << endl;
+                int inRange = 0;
+                for (size_t i = 0; i < flowtable.size(); i++)
+                {
+                    if (flowtable[i].destIP_lo <= IP[0] && flowtable[i].destIP_hi >= IP[1])
+                    {
+                        inRange = 1;
+                        flowtable[i].pktcount++;
+                        cout << "pktcount is " << flowtable[i].pktcount << endl;
+                    }
+                }
+                if (!inRange)
+                {
+                    // create a new entry in the flow table and send a message of query to the controller
+                    createNewFlowEntry(flowtable, IP[1], IP[1]);
+                    flowtable.back().pktcount++;
+                    flowtable.back().actionType = "DROP:0";
+                    SWI *sw = &(**swi);
+                    Packet pack = prepareMessage("QUERY", sw);
+                    string fifoname = "fifo-" + (*swi)->swi + "-0";
+                    int fd = open(fifoname.c_str(), O_WRONLY | O_NONBLOCK);
+                    sendToFifo("fifo-" + (*swi)->swi + "-0", &pack, fd);
+                    close(fd);
+                }
             }
         }
     }
     // fclose(*fdTrafficFile);
 }
 
-void switchLoop(SWI *swi)
+void switchLoop(SWI *swi, vector<flowEntry> &flowtable)
 {
     // ANCHOR SWITCHLOOP
     int fd = 0;
@@ -224,7 +217,7 @@ void switchLoop(SWI *swi)
 
     // TODO  CREATE A SEPEPARATE FUNCTION THAT DOES THIS
 
-    int fdToCont, fdFromCont, fdToLeft, fdToRight, fdFromLeft, fdFromRight = 0;
+    int fdToCont, fdFromCont;
     string fifoToSwitchLeft, fifoFromSwitchLeft, fifoToSwitchRight, fifoFromSwitchRight = "";
 
     // creates controller fifos
@@ -263,6 +256,21 @@ void switchLoop(SWI *swi)
     FILE *trafficFile = fdopen(fdTrafficFile, "r");
     fileDesc.push_back(fdTrafficFile);
 
+    int fdleft, fdRight = 0;
+    if (swi->positionLeft)
+    {
+        // open file for positonleft of switch
+        string fifoleft = "fifo-" + swi->swk + "-" + swi->swi;
+        fdleft = open(fifoleft.c_str(), O_RDONLY | O_NONBLOCK);
+        fileDesc.push_back(fdleft);
+    }
+    if (swi->positionRight)
+    {
+        string fifoRight = "fifo-" + swi->swj + "-" + swi->swi;
+        fdRight = open(fifoRight.c_str(), O_RDONLY | O_NONBLOCK);
+        fileDesc.push_back(fdRight);
+    }
+
     for (std::vector<int>::size_type i = 0; i != fileDesc.size(); i++)
     {
         /* std::cout << v[i]; ... */
@@ -271,36 +279,7 @@ void switchLoop(SWI *swi)
             maxFDS = fileDesc[i];
         }
     }
-    // if (swi->swk.compare("") != 0)
-    // {
-    //     fifoToSwitchRight = "fifo-" + swi->swi + "-" + swi->swk;
-    //     fifoFromSwitchRight = "fifo" + swi->swk + "-" + swi->swi;
 
-    //     // ====================== OPEN FIFO TO SWITCH RIGHT AND FIFO FROM SWITCH RIGHT ================================ //
-    //     fdToRight = open(fifoToSwitchRight.c_str(), O_RDWR | O_NONBLOCK);
-    //     if (fdToRight == -1)
-    //         err_sys("Unable to open fifo to right switch");
-    //     maxFDS++;
-
-    //     // needs read access
-    //     fdToLeft = open(fifoFromSwitchRight.c_str(), O_RDWR | O_NONBLOCK);
-    //     if (fdToLeft == -1)
-    //         err_sys("Unable to open fifo from right switch");
-    //     maxFDS++;
-    // }
-
-    // if (swi->swj.compare("") != 0)
-    // {
-    //     fifoToSwitchLeft = "fifo-" + swi->swi + "-" + swi->swj;
-    //     fifoFromSwitchLeft = "fifo" + swi->swj + "-" + swi->swi;
-    //     fdToLeft = open(fifoToSwitchLeft.c_str(), O_RDWR | O_NONBLOCK);
-    //     if (fdToLeft == -1)
-    //         err_sys("Unable to open fifo to left switch ");
-    //     fdFromLeft = open(fifoFromSwitchLeft.c_str(), O_RDWR | O_WRONLY);
-    //     if (fdFromLeft)
-    //         err_sys("unable to open fifo from switch left");
-    //     maxFDS = maxFDS + 2;
-    // }
     while (1)
     {
         FD_ZERO(&readFds);
@@ -308,6 +287,14 @@ void switchLoop(SWI *swi)
         // FD_SET(fdToCont, &readFds);
         FD_SET(fdFromCont, &readFds);
         FD_SET(fdTrafficFile, &readFds);
+        if (!fdleft)
+        {
+            FD_SET(fdleft, &readFDS);
+        }
+        if (!fdRight)
+        {
+            FD_SET(fdRight, &readFds);
+        }
         // if (fifoToSwitchLeft.compare("") != 0)
         // {
 
@@ -346,7 +333,7 @@ void switchLoop(SWI *swi)
             }
             if (FD_ISSET(fdTrafficFile, &readFds))
             {
-                readTrafficFile(&trafficFile, fifoToController, &swi);
+                readTrafficFile(&trafficFile, fifoToController, &swi, flowtable);
             }
             if (FD_ISSET(fdFromCont, &readFds))
             {
@@ -358,6 +345,7 @@ void switchLoop(SWI *swi)
                     cout << recieve << endl;
                     cout << "bout to give up";
                     cout << recieve << endl;
+                    // case ACK, ADD, RELAY
                 }
             }
         }

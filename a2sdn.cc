@@ -76,11 +76,13 @@ int main(int argc, char **argv)
 		packetStats stats;
 		detectSwitch(argv, &swi);
 		vector<flowEntry> flowtable;
-		initializeCurrentFlowEntry(&swi, flowtable);
+		// initializeCurrentFlowEntry(&swi, flowtable);
+		createNewFlowEntry(flowtable, swi.IP_LOW, swi.IP_HIGH);
+
 		// start a loop and monitor process via poll/select
 		// readFILE(swi.filename, &swi, &stats, flowtable);
 		// start loop
-		switchLoop(&swi);
+		switchLoop(&swi, flowtable);
 	}
 	return 1;
 }
