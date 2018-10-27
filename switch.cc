@@ -194,6 +194,7 @@ static void readTrafficFile(FILE **fdTrafficFile, string toController, SWI **swi
                     string fifoname = "fifo-" + (*swi)->swi + "-0";
                     int fd = open(fifoname.c_str(), O_WRONLY | O_NONBLOCK);
                     sendToFifo("fifo-" + (*swi)->swi + "-0", &pack, fd);
+                    // sendMsgToFifo(fifoname, message, fd);
                     close(fd);
                 }
             }
@@ -210,7 +211,6 @@ void switchLoop(SWI *swi, vector<flowEntry> &flowtable)
     char buf[1025];  // buffer to listen to list and exit
     int ret, sret;   // ret - return and sret - select return
     fd_set readFds;  // readfds - fdset data strucutre
-    int type = 0;    //  may need this later
     timeval timeout; // time out structure for switchloop
     vector<int> fileDesc;
     fileDesc.push_back(fd);
@@ -287,25 +287,14 @@ void switchLoop(SWI *swi, vector<flowEntry> &flowtable)
         // FD_SET(fdToCont, &readFds);
         FD_SET(fdFromCont, &readFds);
         FD_SET(fdTrafficFile, &readFds);
-        if (!fdleft)
+        if (fdleft != 0)
         {
-            FD_SET(fdleft, &readFDS);
+            FD_SET(fdleft, &readFds);
         }
-        if (!fdRight)
+        if (fdRight != 0)
         {
             FD_SET(fdRight, &readFds);
         }
-        // if (fifoToSwitchLeft.compare("") != 0)
-        // {
-
-        //     FD_SET(fdToLeft, &readFds);
-        //     FD_SET(fdFromLeft, &readFds);
-        // }
-        // if (fifoToSwitchRight.compare("") != 0)
-        // {
-        //     FD_SET(fdToRight, &readFds);
-        //     FD_SET(fdFromRight, &readFds);
-        // }
         timeout.tv_sec = 0;
         timeout.tv_usec = 0;
 
@@ -345,7 +334,7 @@ void switchLoop(SWI *swi, vector<flowEntry> &flowtable)
                     cout << recieve << endl;
                     cout << "bout to give up";
                     cout << recieve << endl;
-                    // case ACK, ADD, RELAY
+                    // case ACK, ADD, RELAYIN, RELAYOUT
                 }
             }
         }
