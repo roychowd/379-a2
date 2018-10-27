@@ -60,6 +60,15 @@ typedef struct
 
 typedef struct
 {
+    string swi;
+    string port1;
+    string port2;
+    string port3;
+
+} flowEntryForController;
+
+typedef struct
+{
     int nSwitch;
 } Controller;
 

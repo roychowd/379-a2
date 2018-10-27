@@ -59,8 +59,14 @@ static vector<string> readPacket(std::vector<fifoStruct>::iterator it)
 	len = read(it->fileDescriptorSwiToCont, c, 1024);
 	if (len != -1 && strlen(c) != 0)
 	{
-		cout << c << endl;
+		// cout << c << endl;
 		string messageString = string(c);
+		// char *token = strtok(c, " \n");
+		// while (token != NULL)
+		// {
+		// 	cout << token << " AESFDDfs" << endl;
+		// 	token = strtok(NULL, " \n");
+		// }
 		size_t pos = messageString.find(" ");
 		size_t initialPosition = 0;
 
@@ -71,6 +77,7 @@ static vector<string> readPacket(std::vector<fifoStruct>::iterator it)
 			pos = messageString.find(" ", initialPosition);
 		}
 		tokens.push_back(messageString.substr(initialPosition, std::min(pos, messageString.size()) - initialPosition + 1));
+
 		return tokens;
 	}
 	else
@@ -85,13 +92,24 @@ static void sendToSwitch(string fifoname, string senderPacket)
 	write(fd, senderPacket.c_str(), 100);
 	close(fd);
 }
-static void testType(string kind, string fifoname, vector<string> packRecieve, PACKETCONT *controllerPacketCount)
+
+static void createNewFLowTableEntry(vector<flowEntryForController> &flowtable, vector<string> &recieved)
+{
+	cout << recieved.at(0) << "wtf " << endl;
+	flowEntryForController newEntry;
+	newEntry.port3 = recieved[0];
+	newEntry.port1 = recieved[2];
+	newEntry.port2 = recieved[3];
+	newEntry.swi = recieved[1];
+	flowtable.push_back(newEntry);
+}
+static void testType(string kind, string fifoname, vector<string> &packRecieve, PACKETCONT *controllerPacketCount, vector<flowEntryForController> &flowtable)
 {
 	cout << kind;
 	if (strcmp(kind.c_str(), "OPEN") == 0)
 	{
-		cout << "exeted";
 		string s = "ACK";
+		createNewFLowTableEntry(flowtable, packRecieve);
 		controllerPacketCount->receivedPackets.OPEN++;
 		controllerPacketCount->transmittedPackets.ACK++;
 		sendToSwitch(fifoname, s);
@@ -108,7 +126,15 @@ static void testType(string kind, string fifoname, vector<string> packRecieve, P
 	}
 }
 
-void ControllerLoop(int nswitch)
+static void printFlowTable(vector<flowEntryForController> &flowtable)
+{
+	for (size_t i = 0; i < flowtable.size(); i++)
+	{
+		printf("[%s] port1= %s, port2= %s, port3= %s\n", flowtable[i].swi.c_str(), flowtable[i].port1.c_str(), flowtable[i].port2.c_str(), flowtable[i].port3.c_str());
+	}
+}
+
+void ControllerLoop(int nswitch, vector<flowEntryForController> &flowtable)
 {
 	// ANCHOR  Controller Loop
 	// use IO multiplexing Select() and poll() to handle IO from the keyboard and the attached switches in a nonblocking manner
@@ -170,11 +196,12 @@ void ControllerLoop(int nswitch)
 				{
 					if (strcmp(buf, "list\n") == 0)
 					{
-						cout << "list" << endl;
+						
+						printFlowTable(flowtable);
 					}
 					else if (strcmp(buf, "exit\n") == 0)
 					{
-						cout << "list then exit" << endl;
+						exit(EXIT_SUCCESS);
 					}
 				}
 			}
@@ -190,7 +217,7 @@ void ControllerLoop(int nswitch)
 					// if (strcmp(packRecieve.kind.c_str(), "") != 0)
 					if (packRecieve.size() != 0)
 					{
-						testType(packRecieve.back(), it->fifoNameContToSwi, packRecieve, &controllerPacketCount);
+						testType(packRecieve.back(), it->fifoNameContToSwi, packRecieve, &controllerPacketCount, flowtable);
 					}
 					else
 					{

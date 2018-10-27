@@ -2,19 +2,20 @@
 #define controller_h
 #include "variables.h"
 
-
-
-typedef struct {
+typedef struct
+{
     int OPEN;
     int QUERY;
 } RECEIVEDcont;
 
-typedef struct {
+typedef struct
+{
     int ACK;
     int ADD;
 } TRANSMITTEDcont;
 
-typedef struct {
+typedef struct
+{
     RECEIVEDcont receivedPackets;
     TRANSMITTEDcont transmittedPackets;
 } PACKETCONT;
@@ -23,5 +24,5 @@ typedef struct {
 
 void detectController(char **argv, Controller *controller);
 void startFIFOControllerToSwitch(SWI *swi);
-void ControllerLoop(int nswitch);
+void ControllerLoop(int nswitch, vector<flowEntryForController> &flowtable);
 #endif

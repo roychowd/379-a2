@@ -61,21 +61,21 @@ int main(int argc, char **argv)
 		err_sys("Not Enough Arguments Given");
 	}
 
-
 	if (argc == 3)
 	{
 		Controller controller;
+		vector<flowEntryForController>flowtableController;
 		// packetStats ControllerPacketStats;
 		detectController(argv, &controller);
 		// CONTROLLER LOOP //
-		ControllerLoop(controller.nSwitch);
+		ControllerLoop(controller.nSwitch, flowtableController);
 
 		// for each switch (0- nswitch-1) connect to fifos
 	}
 	if (argc == 6)
 	{
 		SWI swi;
-		
+
 		// packetStats stats;
 
 		detectSwitch(argv, &swi);

@@ -129,8 +129,8 @@ static string prepareMessage(string type, SWI *swi)
     // string message = "sw" + swi->swi;
     // packet.port1 = swi->swj;
     // packet.port2 = swi->swk;
-
-    string message = swi->IP_ADDR = " sw" + swi->swi;
+    cout << "THE IP IS " << swi->IP_ADDR << endl;
+    string message = swi->IP_ADDR + " sw" + swi->swi;
     if (strcmp(swi->swj.c_str(), "") == 0)
     {
         message += " -1";
@@ -149,6 +149,7 @@ static string prepareMessage(string type, SWI *swi)
         message += " sw" + swi->swk;
     }
     message += " " + type;
+    cout << message << " is the messae" << endl;
     // packet.msg = swi->IP_ADDR;
 
     // packet.kind = type;
