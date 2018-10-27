@@ -108,37 +108,51 @@ void createNewFlowEntry(vector<flowEntry> &flowtable, int destIPLow, int destIPH
     flowtable.back().pktcount = 0;
 }
 
-static void sendToFifo(string fifoname, Packet *packet, int fd)
+static void sendToFifo(string fifoname, string msg, int fd)
 {
     assert(fd >= 0);
     // cout << sizeof(&packet) << "ad" << sizeof(Packet);
     // write(fd, &packet, sizeof(Packet));
-    string mg = packet->msg + " " + packet->port1 + " " + packet->port2 + " " + packet->swi + " " + packet->kind;
-    write(fd, mg.c_str(), 100);
+    // string mg = packet->msg + " " + packet->port1 + " " + packet->port2 + " " + packet->swi + " " + packet->kind;
+    write(fd, msg.c_str(), 1024);
     close(fd);
     return;
 }
 
-static Packet prepareMessage(string type, SWI *swi)
+static string prepareMessage(string type, SWI *swi)
 {
-    // ANCHOR  Prepare Message
-    Packet packet;
+    // ANCHOR  Prepare Message for OPEN
+    // Packet packet;
     // memset((char *) &packet,0,sizeof(packet));
-    packet.swi = "sw" + swi->swi;
-    packet.port1 = swi->swj;
-    packet.port2 = swi->swk;
+    // packet.swi = swi->IP_ADDR + "sw" + swi->swi;
+
+    // string message = "sw" + swi->swi;
+    // packet.port1 = swi->swj;
+    // packet.port2 = swi->swk;
+
+    string message = swi->IP_ADDR = " sw" + swi->swi;
     if (strcmp(swi->swj.c_str(), "") == 0)
     {
-        packet.port1 = "-1";
+        message += " -1";
+        // packet.port1 = "-1";
+    }
+    else
+    {
+        message += " sw" + swi->swj;
     }
     if (strcmp(swi->swk.c_str(), "") == 0)
     {
-        packet.port2 = "-1";
+        message += " -1";
     }
-    packet.msg = swi->IP_ADDR;
+    else
+    {
+        message += " sw" + swi->swk;
+    }
+    message += " " + type;
+    // packet.msg = swi->IP_ADDR;
 
-    packet.kind = type;
-    return packet;
+    // packet.kind = type;
+    return message;
 }
 
 static void grabIntsFromLine(int *IP, int n, char *line)
@@ -158,7 +172,15 @@ static void grabIntsFromLine(int *IP, int n, char *line)
     return;
 }
 
-static void readTrafficFile(FILE **fdTrafficFile, string toController, SWI **swi, vector<flowEntry> &flowtable)
+// static void sendMessageToFifo(string message, int fd)
+// {
+//     assert(fd >= 0);
+//     write(fd, message.c_str(), 1024);
+//     close(fd);
+//     return;
+// }
+
+static void readTrafficFile(FILE **fdTrafficFile, string toController, SWI **swi, vector<flowEntry> &flowtable, PACKETSWI *switchPacketCounts)
 {
     // ANCHOR  READTRAFFICFILE
     char line[1024];
@@ -186,14 +208,17 @@ static void readTrafficFile(FILE **fdTrafficFile, string toController, SWI **swi
                 if (!inRange)
                 {
                     // create a new entry in the flow table and send a message of query to the controller
-                    createNewFlowEntry(flowtable, IP[1], IP[1]);
-                    flowtable.back().pktcount++;
-                    flowtable.back().actionType = "DROP:0";
-                    SWI *sw = &(**swi);
-                    Packet pack = prepareMessage("QUERY", sw);
+                    // createNewFlowEntry(flowtable, IP[1], IP[1]);
+                    // flowtable.back().pktcount++;
+                    // flowtable.back().actionType = "DROP:0";
+                    // SWI *sw = &(**swi);
+                    // string packet = prepareMessage("QUERY", sw);
                     string fifoname = "fifo-" + (*swi)->swi + "-0";
+                    string message = to_string(IP[0]) + " " + to_string(IP[1]) + " QUERY";
+                    switchPacketCounts->transmittedPacket.QUERY++;
                     int fd = open(fifoname.c_str(), O_WRONLY | O_NONBLOCK);
-                    sendToFifo("fifo-" + (*swi)->swi + "-0", &pack, fd);
+                    // i need to send the controller a message of the form "switchDestIP fileDESTIPlo fileDestIPHigh QUERY"
+                    sendToFifo("fifo-" + (*swi)->swi + "-0", message, fd);
                     // sendMsgToFifo(fifoname, message, fd);
                     close(fd);
                 }
@@ -203,9 +228,21 @@ static void readTrafficFile(FILE **fdTrafficFile, string toController, SWI **swi
     // fclose(*fdTrafficFile);
 }
 
+static void parseReceived(char **p)
+{
+    char *token = strtok(*p, " ");
+    while (token != NULL)
+    {
+    }
+}
+
+// =============================================================== SWITCH LOOP =====================================================================================
 void switchLoop(SWI *swi, vector<flowEntry> &flowtable)
 {
     // ANCHOR SWITCHLOOP
+    // switchPacketCounts.recievedPacket = {0};
+    // switchPacketCounts.transmittedPacket = {0};
+    PACKETSWI switchPacketCounts = {{0}, {0}};
     int fd = 0;
     int maxFDS = 0;  // stdin = 0;
     char buf[1025];  // buffer to listen to list and exit
@@ -233,8 +270,9 @@ void switchLoop(SWI *swi, vector<flowEntry> &flowtable)
     // maxFDS++;
 
     // openpacket needs to be sent to controller! - prepare the message to be sent to controller
-    Packet openpacket = prepareMessage("OPEN", swi);
-    sendToFifo(fifoToController, &openpacket, fdToCont);
+    switchPacketCounts.transmittedPacket.OPEN++;
+    string openpacket = prepareMessage("OPEN", swi);
+    sendToFifo(fifoToController, openpacket, fdToCont);
     close(fdToCont);
 
     // ================================ OPEN FIFO From Controller (fifo-0-swi)  FOR READING FROM CONTROLLER =========================================
@@ -322,7 +360,7 @@ void switchLoop(SWI *swi, vector<flowEntry> &flowtable)
             }
             if (FD_ISSET(fdTrafficFile, &readFds))
             {
-                readTrafficFile(&trafficFile, fifoToController, &swi, flowtable);
+                readTrafficFile(&trafficFile, fifoToController, &swi, flowtable, &switchPacketCounts);
             }
             if (FD_ISSET(fdFromCont, &readFds))
             {
@@ -335,6 +373,21 @@ void switchLoop(SWI *swi, vector<flowEntry> &flowtable)
                     cout << "bout to give up";
                     cout << recieve << endl;
                     // case ACK, ADD, RELAYIN, RELAYOUT
+                    if (strcmp(recieve, "ACK") == 0)
+                    {
+                        switchPacketCounts.recievedPacket.ACK++;
+                    }
+                    if (strstr(recieve, "ADD"))
+                    {
+                        int IP[2];
+                        grabIntsFromLine(IP, 2, recieve);
+                        switchPacketCounts.recievedPacket.ADDRULE++;
+                        createNewFlowEntry(flowtable, IP[0], IP[1]);
+                        flowtable.back().pktcount++;
+                        flowtable.back().actionType = "DROP:0";
+                        // parseReceived(&recieve);
+                        // create a new entry in the flow table
+                    }
                 }
             }
         }

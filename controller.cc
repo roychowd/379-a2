@@ -50,21 +50,20 @@ void detectController(char **argv, Controller *controller)
 }
 
 // READs incoming signals
-static Packet readPacket(std::vector<fifoStruct>::iterator it)
+static vector<string> readPacket(std::vector<fifoStruct>::iterator it)
 {
 	// ANCHOR  READ-PACKET
 	int len = 0;
-	// Packet pkt;
-	// memset((Packet *) &pkt, 0, sizeof(pkt));
-	Packet newPacket;
-	char *c = (char *)calloc(100, sizeof(char));
-	len = read(it->fileDescriptorSwiToCont, c, 100);
+	std::vector<string> tokens;
+	char *c = (char *)calloc(1024, sizeof(char));
+	len = read(it->fileDescriptorSwiToCont, c, 1024);
 	if (len != -1 && strlen(c) != 0)
 	{
+		cout << c << endl;
 		string messageString = string(c);
 		size_t pos = messageString.find(" ");
 		size_t initialPosition = 0;
-		std::vector<string> tokens;
+
 		while (pos != std::string::npos)
 		{
 			tokens.push_back(messageString.substr(initialPosition, pos - initialPosition));
@@ -72,19 +71,11 @@ static Packet readPacket(std::vector<fifoStruct>::iterator it)
 			pos = messageString.find(" ", initialPosition);
 		}
 		tokens.push_back(messageString.substr(initialPosition, std::min(pos, messageString.size()) - initialPosition + 1));
-		newPacket.kind = tokens.at(4);
-		newPacket.msg = tokens.at(0);
-		newPacket.port1 = tokens.at(1);
-		newPacket.port2 = tokens.at(2);
-		newPacket.swi = tokens.at(3);
-
-		return newPacket;
+		return tokens;
 	}
 	else
 	{
-
-		newPacket.kind = "";
-		return newPacket;
+		return tokens;
 	}
 }
 
@@ -94,18 +85,26 @@ static void sendToSwitch(string fifoname, string senderPacket)
 	write(fd, senderPacket.c_str(), 100);
 	close(fd);
 }
-static void testType(string kind, string fifoname)
+static void testType(string kind, string fifoname, vector<string> packRecieve, PACKETCONT *controllerPacketCount)
 {
 	cout << kind;
 	if (strcmp(kind.c_str(), "OPEN") == 0)
 	{
 		cout << "exeted";
 		string s = "ACK";
+		controllerPacketCount->receivedPackets.OPEN++;
+		controllerPacketCount->transmittedPackets.ACK++;
 		sendToSwitch(fifoname, s);
 	}
-	else
+	else if (strcmp(kind.c_str(), "QUERY") == 0)
 	{
-		return;
+		cout << "WE GOT QUEEERY" << endl;
+		// iterate through my flowtable and send drop or add but for now ill do add
+		controllerPacketCount->receivedPackets.QUERY++;
+		controllerPacketCount->transmittedPackets.ADD++;
+		string s = packRecieve[0] + " " + packRecieve[1] + " ADD";
+		sendToSwitch(fifoname, s);
+		// return;
 	}
 }
 
@@ -114,6 +113,9 @@ void ControllerLoop(int nswitch)
 	// ANCHOR  Controller Loop
 	// use IO multiplexing Select() and poll() to handle IO from the keyboard and the attached switches in a nonblocking manner
 	// set of file descriptors ( need to monitor conncections to stdin and piping information!!! )
+	// controllerPacketCounts.receivedPackets = {0};
+	// controllerPacketCounts.transmittedPackets = {0};
+	PACKETCONT controllerPacketCount = {{0}, {0}};
 	int fd = 0; // stdin = 0;
 	char buf[1025];
 	// int maxFDS = 1;
@@ -122,14 +124,8 @@ void ControllerLoop(int nswitch)
 	int type = 0;
 	timeval timeout;
 	vector<fifoStruct> fifos = setUpFifos(nswitch);
-
-	// if (nswitch == 1)
-	// {
-	// 	maxFDS = 4;
-	// }
-	// cout << maxFDS << endl;
 	int maxfd = 0;
-	for (int x = 0; x < fifos.size(); x++)
+	for (size_t x = 0; x < fifos.size(); x++)
 	{
 		// FD_SET(fifos.at(x).fileDescriptorContToSwi, &readFds);
 		if (fifos.at(x).fileDescriptorSwiToCont > maxfd)
@@ -188,19 +184,19 @@ void ControllerLoop(int nswitch)
 
 				if (FD_ISSET(it->fileDescriptorSwiToCont, &readFds))
 				{
-					Packet packRecieve;
-					packRecieve = readPacket(it);
+					vector<string> packRecieve = readPacket(it);
+
 					// cout << packRecieve.kind << endl;
-					if (strcmp(packRecieve.kind.c_str(), "") != 0)
+					// if (strcmp(packRecieve.kind.c_str(), "") != 0)
+					if (packRecieve.size() != 0)
 					{
-						testType(packRecieve.kind, it->fifoNameContToSwi);
+						testType(packRecieve.back(), it->fifoNameContToSwi, packRecieve, &controllerPacketCount);
 					}
 					else
 					{
 						continue;
 					}
 					cout << "written to " << it->fifoNameContToSwi << endl;
-					
 				}
 			}
 		}

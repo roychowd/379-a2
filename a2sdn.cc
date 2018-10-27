@@ -60,10 +60,12 @@ int main(int argc, char **argv)
 	{
 		err_sys("Not Enough Arguments Given");
 	}
+
+
 	if (argc == 3)
 	{
 		Controller controller;
-		packetStats ControllerPacketStats;
+		// packetStats ControllerPacketStats;
 		detectController(argv, &controller);
 		// CONTROLLER LOOP //
 		ControllerLoop(controller.nSwitch);
@@ -73,7 +75,9 @@ int main(int argc, char **argv)
 	if (argc == 6)
 	{
 		SWI swi;
-		packetStats stats;
+		
+		// packetStats stats;
+
 		detectSwitch(argv, &swi);
 		vector<flowEntry> flowtable;
 		// initializeCurrentFlowEntry(&swi, flowtable);

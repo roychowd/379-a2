@@ -10,13 +10,31 @@ typedef struct
     string fifoToSwi;
 } switchFifos;
 
+typedef struct
+{
+    int ADMIT;
+    int ACK;
+    int ADDRULE;
+    int RELAYIN;
+} RECEIVEDswi;
+
+typedef struct
+{
+    int OPEN;
+    int QUERY;
+    int RELAYOUT;
+} TRANSMITTEDswi;
+
+typedef struct
+{
+    RECEIVEDswi recievedPacket;
+    TRANSMITTEDswi transmittedPacket;
+} PACKETSWI;
+
+// extern PACKETSWI switchPacketCounts;
+
 void detectSwitch(char **argv, SWI *swi);
-// void initializeCurrentFlowEntry(SWI *swi, vector<flowEntry> &flowtable);
 void createNewFlowEntry(vector<flowEntry> &flowtable, int destIPLow, int destIPHigh);
-// void startFIFOSwitchToController(SWI *swi);
-// void readFILE(string filename, SWI *swi, packetStats *stats, vector<flowEntry> flowtable);
-// void startFifoSwitchToSwitch(SWI *swi);
-// void sendMessageToController();
 void switchLoop(SWI *swi, vector<flowEntry> &flowtable);
 
 #endif
