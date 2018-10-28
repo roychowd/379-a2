@@ -234,9 +234,10 @@ static void printFlowTable(vector<flowEntry> &flowtable)
 {
     for (size_t i = 0; i < flowtable.size(); i++)
     {
-        printf("[%d] (srcIP= %s, destIP= %s, action= %s, pri= %d, pktCount= %d\n", (int)i, flowtable[i].srcIP.c_str(), flowtable[i].destIP.c_str(), flowtable[i].actionType.c_str(), flowtable[i].pri, flowtable[i].pktcount);
+        printf("[%d] (srcIP= %s, destIP= %s, action= %s, pri= %d, pktCount= %d )\n", (int)i, flowtable[i].srcIP.c_str(), flowtable[i].destIP.c_str(), flowtable[i].actionType.c_str(), flowtable[i].pri, flowtable[i].pktcount);
     }
 }
+
 // =============================================================== SWITCH LOOP =====================================================================================
 void switchLoop(SWI *swi, vector<flowEntry> &flowtable)
 {
@@ -295,20 +296,26 @@ void switchLoop(SWI *swi, vector<flowEntry> &flowtable)
     FILE *trafficFile = fdopen(fdTrafficFile, "r");
     fileDesc.push_back(fdTrafficFile);
 
-    int fdleft, fdRight = 0;
+    int fdleft = 0;
+    int fdRight = 0;
+    cout << swi->positionLeft << swi->positionRight << endl;
+
     if (swi->positionLeft)
     {
         // open file for positonleft of switch
-        string fifoleft = "fifo-" + swi->swk + "-" + swi->swi;
+        string fifoleft = "fifo-" + to_string(swi->positionLeft) + "-" + swi->swi;
         fdleft = open(fifoleft.c_str(), O_RDONLY | O_NONBLOCK);
         fileDesc.push_back(fdleft);
     }
+    // fdleft= 0;
     if (swi->positionRight)
     {
-        string fifoRight = "fifo-" + swi->swj + "-" + swi->swi;
+        string fifoRight = "fifo-" + to_string(swi->positionRight) + "-" + swi->swi;
+        cout << fifoRight << endl;
         fdRight = open(fifoRight.c_str(), O_RDONLY | O_NONBLOCK);
         fileDesc.push_back(fdRight);
     }
+    cout << "fd right " << fdRight << endl;
 
     for (std::vector<int>::size_type i = 0; i != fileDesc.size(); i++)
     {
@@ -371,9 +378,7 @@ void switchLoop(SWI *swi, vector<flowEntry> &flowtable)
                 len = read(fdFromCont, recieve, 100);
                 if (len == 100)
                 {
-                    cout << recieve << endl;
-                    cout << "bout to give up";
-                    cout << recieve << endl;
+             
                     // case ACK, ADD, RELAYIN, RELAYOUT
                     if (strcmp(recieve, "ACK") == 0)
                     {
@@ -381,18 +386,28 @@ void switchLoop(SWI *swi, vector<flowEntry> &flowtable)
                     }
                     if (strstr(recieve, "ADD"))
                     {
-                        cout << recieve << "is reci" << endl;
                         int IP[2];
                         grabIntsFromLine(IP, 2, recieve);
                         switchPacketCounts.recievedPacket.ADDRULE++;
-                        cout << "wakanadaa" << IP[0] << IP[1];
                         createNewFlowEntry(flowtable, IP[0], IP[1]);
                         flowtable.back().pktcount++;
                         flowtable.back().actionType = "DROP:0";
                         // parseReceived(&recieve);
                         // create a new entry in the flow table
                     }
+                    if (strstr(recieve, "RELAY"))
+                    {
+                        cout << "RELAY " << endl;
+                    }
                 }
+            }
+            if (fdleft != 0 && FD_ISSET(fdleft, &readFds))
+            {
+                cout << "fd left " << fdleft << endl;
+            }
+            if (fdRight != 0 && FD_ISSET(fdRight, &readFds))
+            {
+                cout << "fd rigt" << fdRight << endl;
             }
         }
     }
