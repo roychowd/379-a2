@@ -363,7 +363,8 @@ void switchLoop(SWI *swi, vector<flowEntry> &flowtable)
                     }
                     else if (strcmp(buf, "exit\n") == 0)
                     {
-                        cout << "list then exit" << endl;
+                        exit(EXIT_SUCCESS);
+                        // cout << "list then exit" << endl;
                     }
                 }
             }
@@ -378,7 +379,7 @@ void switchLoop(SWI *swi, vector<flowEntry> &flowtable)
                 len = read(fdFromCont, recieve, 100);
                 if (len == 100)
                 {
-             
+
                     // case ACK, ADD, RELAYIN, RELAYOUT
                     if (strcmp(recieve, "ACK") == 0)
                     {
