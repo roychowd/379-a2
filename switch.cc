@@ -229,14 +229,13 @@ static void readTrafficFile(FILE **fdTrafficFile, string toController, SWI **swi
     // fclose(*fdTrafficFile);
 }
 
-static void parseReceived(char **p)
+static void printFlowTable(vector<flowEntry> &flowtable)
 {
-    char *token = strtok(*p, " ");
-    while (token != NULL)
+    for (size_t i = 0; i < flowtable.size(); i++)
     {
+        printf("[%d] (srcIP= %s, destIP= %s, action= %s, pri= %d, pktCount= %d\n", (int)i, flowtable[i].srcIP.c_str(), flowtable[i].destIP.c_str(), flowtable[i].actionType.c_str(), flowtable[i].pri, flowtable[i].pktcount);
     }
 }
-
 // =============================================================== SWITCH LOOP =====================================================================================
 void switchLoop(SWI *swi, vector<flowEntry> &flowtable)
 {
@@ -334,7 +333,7 @@ void switchLoop(SWI *swi, vector<flowEntry> &flowtable)
         {
             FD_SET(fdRight, &readFds);
         }
-        timeout.tv_sec = 0;
+        timeout.tv_sec = 9;
         timeout.tv_usec = 0;
 
         sret = select(maxFDS + 1, &readFds, NULL, NULL, &timeout);
@@ -352,6 +351,7 @@ void switchLoop(SWI *swi, vector<flowEntry> &flowtable)
                     if (strcmp(buf, "list\n") == 0)
                     {
                         cout << "list" << endl;
+                        printFlowTable(flowtable);
                     }
                     else if (strcmp(buf, "exit\n") == 0)
                     {
