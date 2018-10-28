@@ -159,15 +159,16 @@ static string prepareMessage(string type, SWI *swi)
 static void grabIntsFromLine(int *IP, int n, char *line)
 {
     char *tok = strtok(line, " \n");
-    int counter = 0;
+
+    int index = 0;
     while (tok != NULL)
     {
-        if (counter > 0 && counter <= n)
+        int x = atoi(tok);
+        if (x && index < 2)
         {
-            int x = atoi(tok);
-            IP[counter - 1] = x;
+            IP[index] = x;
+            index++;
         }
-        counter++;
         tok = strtok(NULL, " \n");
     }
     return;
@@ -380,9 +381,11 @@ void switchLoop(SWI *swi, vector<flowEntry> &flowtable)
                     }
                     if (strstr(recieve, "ADD"))
                     {
+                        cout << recieve << "is reci" << endl;
                         int IP[2];
                         grabIntsFromLine(IP, 2, recieve);
                         switchPacketCounts.recievedPacket.ADDRULE++;
+                        cout << "wakanadaa" << IP[0] << IP[1];
                         createNewFlowEntry(flowtable, IP[0], IP[1]);
                         flowtable.back().pktcount++;
                         flowtable.back().actionType = "DROP:0";
